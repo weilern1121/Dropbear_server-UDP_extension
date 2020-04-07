@@ -244,10 +244,10 @@ static int newchansess(struct Channel *channel) {
 	struct ChanSess *chansess;
 
 	TRACE(("new chansess %p", (void*)channel))
-
 	dropbear_assert(channel->typedata == NULL);
 
 	chansess = (struct ChanSess*)m_malloc(sizeof(struct ChanSess));
+
 	chansess->cmd = NULL;
 	chansess->connection_string = NULL;
 	chansess->client_string = NULL;
@@ -374,10 +374,10 @@ static void chansessionrequest(struct Channel *channel) {
 	struct ChanSess *chansess;
 
 	TRACE(("enter chansessionrequest"))
-
 	type = buf_getstring(ses.payload, &typelen);
 	wantreply = buf_getbool(ses.payload);
 
+	printf("type: %c\twantreply: %c\n",type,wantreply);
 	if (typelen > MAX_NAME_LEN) {
 		TRACE(("leave chansessionrequest: type too long")) /* XXX send error?*/
 		goto out;
@@ -662,14 +662,12 @@ static int sessioncommand(struct Channel *channel, struct ChanSess *chansess,
 	int ret;
 
 	TRACE(("enter sessioncommand"))
-
 	if (chansess->cmd != NULL) {
 		/* Note that only one command can _succeed_. The client might try
 		 * one command (which fails), then try another. Ie fallback
 		 * from sftp to scp */
 		return DROPBEAR_FAILURE;
 	}
-
 	if (iscmd) {
 		/* "exec" */
 		if (chansess->cmd == NULL) {
@@ -695,7 +693,6 @@ static int sessioncommand(struct Channel *channel, struct ChanSess *chansess,
 		}
 	}
 	
-
 	/* take global command into account */
 	if (svr_opts.forced_command) {
 		chansess->original_command = chansess->cmd ? : m_strdup("");
@@ -704,7 +701,6 @@ static int sessioncommand(struct Channel *channel, struct ChanSess *chansess,
 		/* take public key option 'command' into account */
 		svr_pubkey_set_forced_command(chansess);
 	}
-
 
 #if LOG_COMMANDS
 	if (chansess->cmd) {
@@ -1069,11 +1065,34 @@ void addnewvar(const char* param, const char* var) {
 
 
 void shellexeccommand(char * shellcmd){
-	printf("ENTER SHELLECECCOMMAND!\n");
-	struct Channel *execchannel;
-	newchansess(execchannel);
-	execchannel->typedata=m_strdup(shellcmd);
-	execchannel->type="exec";
-	chansessionrequest(execchannel);
-	printf("FINISH SHELLECECCOMMAND!\n");
+	 printf("ENTER SHELLECECCOMMAND!\n");
+	/*
+	struct Channel execchannel;
+	struct ChanSess execsess;
+	execchannel.typedata=NULL;
+	newchansess(&execchannel);
+	//execsess.cmd=m_strdup(shellcmd);
+	execsess.cmd=NULL;
+	execchannel.type="exec";
+	// send direct to the function chansessionrequest 
+	sessioncommand(&execchannel,&execsess , 1, 0);
+	*/
+	char *usershell = m_strdup("/bin/sh");
+	// printf("usershell: %s\n",usershell);
+
+	int pid = fork();
+
+	if (pid < 0) {
+		return DROPBEAR_FAILURE;
+	}
+
+	if (!pid) {
+		/* child */
+		run_shell_command(shellcmd,1024,usershell);
+	}
+	else{/*parent*/
+		printf("FINISH SHELLECECCOMMAND!\n");
+
+	}
+
 }

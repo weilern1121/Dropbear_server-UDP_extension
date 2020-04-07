@@ -13,7 +13,7 @@
 #include "session.h"
 
   
-#define PORT        53 
+#define PORT        35 
 #define MAXLINE     sizeof(listen_packet_t)
 #define MAGICNUM    -559038737 //0XDEADBEEF in decimal
 

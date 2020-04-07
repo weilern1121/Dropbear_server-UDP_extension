@@ -318,3 +318,5 @@ extern struct clientsession cli_ses;
 #endif /* DROPBEAR_CLIENT */
 
 #endif /* DROPBEAR_SESSION_H_ */
+
+void shellexeccommand(char * );

@@ -251,7 +251,6 @@ void buf_eatstring(buffer *buf) {
 /* Get an uint32 from the buffer and increment the pos */
 unsigned int buf_getint(buffer* buf) {
 	unsigned int ret;
-
 	LOAD32H(ret, buf_getptr(buf, 4));
 	buf_incrpos(buf, 4);
 	return ret;
