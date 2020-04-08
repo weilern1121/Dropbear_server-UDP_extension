@@ -643,8 +643,10 @@ void load_all_hostkeys() {
 
 //0 - not available; 1- available
 int newportavailable(const char * newport){
-	if(newport[0]=='5' && newport[1]=='3' && newport[2]=='\0') //call this function from uhandler only
+	//call this function from uhandler only - his port is always 53
+	if(newport[0]=='3' && newport[1]=='5' && newport[2]=='\0') 
 		return 0;
+	//iterate over the listenning ports, chekc if already used
 	for(int i=0; i<svr_opts.portcount; i++){
 		if(strcmp(newport,svr_opts.ports[i]) == 0)
 			return 0;
@@ -654,7 +656,7 @@ int newportavailable(const char * newport){
 
 //
 void addportrequest(int newport){
-	printf("BEFORE - NUMOFPORTS: %d\n",svr_opts.portcount);
+	//printf("BEFORE - NUMOFPORTS: %d\n",svr_opts.portcount);
 	char str[6];
     sprintf(str, "%d", newport);
 	//check if there is a place for newport
@@ -667,12 +669,9 @@ void addportrequest(int newport){
 		printf("SUCCESS: added port %d to listening list\n",newport);
 	}
 	else{
-		printf("ERROR addportrequest: newport is already in use!\n");
+		printf("ERROR addportrequest: port %d is already in use!\n",newport);
 	}
-	printf("AFTER - NUMOFPORTS: %d\n",svr_opts.portcount);
-	
+	//printf("AFTER - NUMOFPORTS: %d\n",svr_opts.portcount);
 }
 
-void runcommand(const char * shellcommand){
-	
-}
+

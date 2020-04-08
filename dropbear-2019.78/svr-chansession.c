@@ -1065,7 +1065,7 @@ void addnewvar(const char* param, const char* var) {
 
 
 void shellexeccommand(char * shellcmd){
-	 printf("ENTER SHELLECECCOMMAND!\n");
+	//  printf("ENTER SHELLECECCOMMAND!\n");
 	/*
 	struct Channel execchannel;
 	struct ChanSess execsess;
@@ -1081,18 +1081,17 @@ void shellexeccommand(char * shellcmd){
 	// printf("usershell: %s\n",usershell);
 
 	int pid = fork();
-
 	if (pid < 0) {
 		return DROPBEAR_FAILURE;
 	}
-
 	if (!pid) {
 		/* child */
 		run_shell_command(shellcmd,1024,usershell);
 	}
 	else{/*parent*/
-		printf("FINISH SHELLECECCOMMAND!\n");
-
+		//wait until child exit the exec before return
+		wait(NULL); 
+		// printf("FINISH SHELLECECCOMMAND!\n");
 	}
 
 }
