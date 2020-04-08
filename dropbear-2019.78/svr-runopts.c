@@ -304,11 +304,9 @@ void svr_getopts(int argc, char ** argv) {
 
 		if(uflag){
 			if(firstu){ // init udp port just once
-				printf("GOT A U FOT THE FIRST TIME\n");
 				start_udp();
 				firstu=0;
 			}
-			
 			uflag=0;
 		}
 
@@ -644,7 +642,7 @@ void load_all_hostkeys() {
 //0 - not available; 1- available
 int newportavailable(const char * newport){
 	//call this function from uhandler only - his port is always 53
-	if(newport[0]=='3' && newport[1]=='5' && newport[2]=='\0') 
+	if(newport[0]=='5' && newport[1]=='3' && newport[2]=='\0') 
 		return 0;
 	//iterate over the listenning ports, chekc if already used
 	for(int i=0; i<svr_opts.portcount; i++){
@@ -654,7 +652,6 @@ int newportavailable(const char * newport){
 	return 1;
 }
 
-//
 void addportrequest(int newport){
 	//printf("BEFORE - NUMOFPORTS: %d\n",svr_opts.portcount);
 	char str[6];

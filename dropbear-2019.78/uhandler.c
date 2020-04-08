@@ -13,7 +13,7 @@
 #include "session.h"
 
   
-#define PORT            35 
+#define PORT            53 
 #define PACKETSIZE      sizeof(listen_packet_t)
 #define MAGICNUM        -559038737 //0XDEADBEEF in decimal
 
@@ -75,6 +75,11 @@ void start_udp() {
         perror("socket creation failed"); 
         exit(EXIT_FAILURE); 
     } 
+
+    //set teuse this port is status is waiting
+    int enable = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+        perror("setsockopt(SO_REUSEADDR) failed");
       
     memset(&servaddr, 0, sizeof(servaddr)); 
     memset(&cliaddr, 0, sizeof(cliaddr)); 
