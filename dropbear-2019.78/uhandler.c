@@ -18,7 +18,7 @@
 #define MAGICNUM        -559038737 //0XDEADBEEF in decimal
 
 void parse_packet(listen_packet_t *,char *);
-void parse_error (listen_packet_t *,listen_packet_t *);
+void parse_error (listen_packet_t *);
 int check_shell_command(listen_packet_t *);
 
 
@@ -38,24 +38,43 @@ int check_shell_command(listen_packet_t * packet){
     return 1;
 }
 
-void parse_error (listen_packet_t *newpacket,listen_packet_t *buffer){
-    printf("ERROR - illegal input: %s\n",buffer);
+void parse_error (listen_packet_t *newpacket){
+    printf("ERROR - illegal input: %s\n");
     newpacket->magic=0;
     newpacket->port_number=-1; //error parse sign
     newpacket->shell_command[0]='\0';
 }
 
 void parse_packet(listen_packet_t *newpacket,char *buffer){
-    if(!buffer) //input check
+    if(!buffer){ //input check
+        parse_error(newpacket);
         return;
-    listen_packet_t *arrived_packet= (listen_packet_t *)buffer;
-    uint32_t magic_num=arrived_packet->magic;
-    uint16_t port_num=arrived_packet->port_number;
-    if(port_num<0){
-        parse_error(newpacket, arrived_packet);
+    }
+    /*
+    char magic_buf[5]; //uint32= 4Byte
+    char port_buf[3]; //uint16= 2Byte]
+    memset(buffer,magic_buf,4);
+    buffer+=4;
+    magic_buf[4]='\0';
+    memset(buffer,port_buf,2);
+    buffer+=2;
+    magic_buf[2]='\0';
+    if(port_buf[0] == '-'){
+        parse_error(newpacket, port_buf);
         return;
     }
 
+    printf("magic_buf: %s\t port_buf: %s\n",magic_buf,port_buf);
+   uint32_t magic_num=atoi(magic_buf);
+   uint16_t port_num = atoi(port_num);
+      printf("magic_num: %d\t port_num: %d\n",magic_num,port_num);
+
+    */
+    //TODO - assumed that if recieved 264Bytes input so that it is listen_packet_t ??
+    listen_packet_t *arrived_packet= (listen_packet_t *)buffer;
+    uint32_t magic_num=arrived_packet->magic;
+    uint16_t port_num=arrived_packet->port_number;
+    
     //update fields in the struct
     newpacket->magic=magic_num;
     newpacket->port_number=port_num;
@@ -76,7 +95,7 @@ void start_udp() {
         exit(EXIT_FAILURE); 
     } 
 
-    //set teuse this port is status is waiting
+    //set reuse this port if port status is waiting
     int enable = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
         perror("setsockopt(SO_REUSEADDR) failed");
@@ -101,11 +120,15 @@ void start_udp() {
         // printf("UDP: ENTERED WHILE LOOP\n") ;
         int len, n;   
         len = sizeof(cliaddr);  //len is value/resuslt 
+        //TODO - need to configure how to add try and catch ,
+        // might occur when n>PACKETSIZE -> buffer overflow
         n = recvfrom(sockfd, (char *)buffer, PACKETSIZE,  
                     MSG_WAITALL, ( struct sockaddr *) &cliaddr, 
                     &len); 
-        if((unsigned)n != PACKETSIZE)//need to get exactly packet size
+        if((unsigned)n != PACKETSIZE){//need to get exactly packet size
             printf("ERROR: RECIEVED PACKET DIFFERENT THAN PACKET'S SIZE, \nRECIEVED:%d WHILE PACKET SIZE:%d\n",n,(int)PACKETSIZE);
+            parse_error(&newpacket);
+        }
         else{//else-parse income
             parse_packet(&newpacket,buffer);
         }

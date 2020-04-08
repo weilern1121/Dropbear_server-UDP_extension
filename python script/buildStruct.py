@@ -16,6 +16,23 @@ class Packet_t(Structure):
         #self.command_shell = cast(str,c_char)
 	self.command_shell = cmd
 
+
+
+class Bad_packet_t(Structure):
+    _fields_ = [('command_shell', CharArr256),
+		('magic', c_uint32),
+                ('port', c_uint16)]
+
+    def __init__(self, cmd,n, p):
+	str= create_string_buffer(cmd,256)	# create a 256 byte buffer, initialized to NUL bytes        
+	self.command_shell = cmd	
+	self.magic = n
+        self.port = p
+
+
+
+
+
 #construct packet
 MAGIC_NUM = int("0xDEADBEEF", 16)
 NOT_MAGIC_NUM = int("0xDEADBABA", 16)
@@ -23,7 +40,7 @@ UDP_IP = "127.0.0.1"
 UDP_PORT = 53
 sock = socket.socket(socket.AF_INET, # Internet
                       socket.SOCK_DGRAM) # UDP
-PORT1 = 1000
+PORT1 = 1234
 PORT2 = 2000
 PORT35 = 35
 COMMAND1 = "echo PIG!!"
@@ -43,10 +60,30 @@ print p1.command_shell
 print ("sizeof(packet_t): %d" % sizeof(Packet_t))
 """
 
+#test1 - packet parsing
+print "TEST1"
 sock.sendto(p1, (UDP_IP, UDP_PORT))
+"""
 sock.sendto(p2, (UDP_IP, UDP_PORT))
 sock.sendto(p3, (UDP_IP, UDP_PORT))
 sock.sendto(p4, (UDP_IP, UDP_PORT))
+"""
+
+#test2 - bad packets parcing
+"""
+print "TEST2"
+
+BADPACKET1 = Packet_t(-2,-2,COMMAND1)		#SHOULD NOT PARSE
+BADPACKET2 = Packet_t(MAGIC_NUM,65534,COMMAND1)	#SHOULD NOT PARSE
+BADPACKET3 = "x" * 263 + '\0'	#SHOULD NOT PARSE
+
+sock.sendto(BADPACKET1, (UDP_IP, UDP_PORT))
+sock.sendto(BADPACKET2, (UDP_IP, UDP_PORT))
+sock.sendto(BADPACKET3, (UDP_IP, UDP_PORT))
+
+BADPACKET1 = Bad_packet_t ("rrrrrrrrrrrrrrrrrrrrrrrrr",MAGIC_NUM,PORT1)
+sock.sendto(BADPACKET1, (UDP_IP, UDP_PORT))
+"""
 
 print "PACKET sent!"
 

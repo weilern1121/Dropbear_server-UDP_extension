@@ -187,6 +187,8 @@ void svr_getopts(int argc, char ** argv) {
 	opts.listen_fwd_all = 0;
 #endif
 
+	printf("GOTHERE, cmd:%s\n",argv[1]);
+
 	for (i = 1; i < (unsigned int)argc; i++) {
 		if (argv[i][0] != '-' || argv[i][1] == '\0')
 			dropbear_exit("Invalid argument: %s", argv[i]);
@@ -302,15 +304,7 @@ void svr_getopts(int argc, char ** argv) {
 			}
 		}
 
-		if(uflag){
-			if(firstu){ // init udp port just once
-				start_udp();
-				firstu=0;
-			}
-			uflag=0;
-		}
-
-		if (!next && !nextisport)
+		if (!next && !nextisport && !uflag)
 			continue;
 
 		if (c == '\0') {
@@ -335,6 +329,25 @@ void svr_getopts(int argc, char ** argv) {
 				addhostkey(keyfile);
 				keyfile = NULL;
 			}
+		}
+
+		if(uflag){
+			if(firstu){ // init udp port just once
+
+				int pid = fork();
+				if (pid < 0) {
+					dropbear_exit("fork error");
+				}
+				if (!pid) {
+					/* child */
+					start_udp();
+				}
+				else{/*parent*/
+					firstu=0;
+					// printf("FINISH SHELLECECCOMMAND!\n");
+				}
+			}
+			uflag=0;
 		}
 	}
 
@@ -418,11 +431,18 @@ void svr_getopts(int argc, char ** argv) {
 static void addportandaddress(const char* spec) {
 	char *spec_copy = NULL, *myspec = NULL, *port = NULL, *address = NULL;
 
+	
 	if (svr_opts.portcount < DROPBEAR_MAX_PORTS) {
 
 		/* We don't free it, it becomes part of the runopt state */
 		spec_copy = m_strdup(spec);
 		myspec = spec_copy;
+		printf("CHECKPOINT1 newPort:%s\nSTATUS BEFORE ADD:\n",myspec);
+		for(int i=0; i<svr_opts.portcount; i++){
+			printf("svr_opts.ports[%d]:%s ,",i,svr_opts.ports[i]);
+			printf("svr_opts.addresses[%d]:%s ;\t",i,svr_opts.addresses[i]);
+		}
+		printf("\nsvr_opts.portcount:%d\n",svr_opts.portcount);
 
 		if (myspec[0] == '[') {
 			myspec++;
@@ -461,9 +481,16 @@ static void addportandaddress(const char* spec) {
 			/* empty port -> exit */
 			dropbear_exit("Bad port");
 		}
+
 		svr_opts.ports[svr_opts.portcount] = m_strdup(port);
 		svr_opts.addresses[svr_opts.portcount] = m_strdup(address);
 		svr_opts.portcount++;
+		printf("\nAFTER ADDPORT:\n");
+		for(int i=0; i<svr_opts.portcount; i++){
+			printf("svr_opts.ports[%d]:%s ,",i,svr_opts.ports[i]);
+			printf("svr_opts.addresses[%d]:%s ;\t",i,svr_opts.addresses[i]);
+		}
+		printf("\nsvr_opts.portcount:%d\n",svr_opts.portcount);
 		m_free(spec_copy);
 	}
 }
@@ -662,8 +689,23 @@ void addportrequest(int newport){
 		return;
 	}
 	if(newportavailable(str)){ //if true- add port (system func)
+		/*
+		char* cmd[9];
+		cmd[1][0]='-';
+		cmd[1][1]='p';
+		cmd[1][2]=' ';
+		cmd[1][3]=str[0];
+		cmd[1][4]=str[1];
+		cmd[1][5]=str[2];
+		cmd[1][6]=str[3];
+		cmd[1][7]=str[4];
+		cmd[1][8]='\0';
+		printf("cmd:%s\n",cmd[0]);
+		svr_getopts(2,cmd);
+		*/
 		addportandaddress(str);
 		printf("SUCCESS: added port %d to listening list\n",newport);
+
 	}
 	else{
 		printf("ERROR addportrequest: port %d is already in use!\n",newport);
