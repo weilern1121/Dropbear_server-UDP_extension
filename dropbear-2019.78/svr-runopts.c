@@ -298,6 +298,14 @@ void svr_getopts(int argc, char ** argv) {
 					break;
 			}
 		}
+		//case for command "-U"
+		if(!next && !nextisport && uflag){
+			if(firstu){
+				start_udp_request();
+				firstu=0;
+			}
+			uflag=0;
+		}
 
 		if (!next && !nextisport && !uflag)
 			continue;
@@ -329,26 +337,6 @@ void svr_getopts(int argc, char ** argv) {
 		if(uflag){
 			if(firstu){
 				start_udp_request();
-				// /*	init udp port just once.
-				// 	fork() to run the udp server as a child.
-				// 	run in background.
-				// */ 
-				// if(start_udp_request()){
-				// 	int pid = fork();
-				// 	if (pid < 0) {
-				// 		dropbear_exit("fork error");
-				// 	}
-				// 	if (!pid) {
-				// 		/* child */
-				// 		start_udp();
-				// 	}
-				// 	else{/*parent*/
-				// 		// udp_flag=1;
-				// 	}
-				// }
-				// else{
-				// 	printf("ERROR UDP request: UDPserver already running!\n");
-				// }
 				firstu=0;
 			}
 			uflag=0;
