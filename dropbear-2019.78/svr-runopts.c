@@ -307,7 +307,7 @@ void svr_getopts(int argc, char ** argv) {
 			uflag=0;
 		}
 
-		if (!next && !nextisport && !uflag)
+		if (!next && !nextisport)
 			continue;
 
 		if (c == '\0') {
@@ -650,6 +650,4 @@ void load_all_hostkeys() {
 		dropbear_exit("No hostkeys available. 'dropbear -R' may be useful or run dropbearkey.");
 	}
 }
-
-
 

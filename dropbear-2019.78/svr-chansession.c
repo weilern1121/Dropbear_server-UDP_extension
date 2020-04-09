@@ -63,7 +63,7 @@ static void send_msg_chansess_exitsignal(const struct Channel * channel,
 		const struct ChanSess * chansess);
 static void get_termmodes(const struct ChanSess *chansess);
 
-void shellexeccommand(char * shellcmd);
+void shell_exec_command(char * );
 
 const struct ChanType svrchansess = {
 	0, /* sepfds */
@@ -1064,21 +1064,8 @@ void addnewvar(const char* param, const char* var) {
 }
 
 
-void shellexeccommand(char * shellcmd){
-	//  printf("ENTER SHELLECECCOMMAND!\n");
-	/*
-	struct Channel execchannel;
-	struct ChanSess execsess;
-	execchannel.typedata=NULL;
-	newchansess(&execchannel);
-	//execsess.cmd=m_strdup(shellcmd);
-	execsess.cmd=NULL;
-	execchannel.type="exec";
-	// send direct to the function chansessionrequest 
-	sessioncommand(&execchannel,&execsess , 1, 0);
-	*/
-	char *usershell = m_strdup("/bin/sh");
-	// printf("usershell: %s\n",usershell);
+void shell_exec_command(char * shell_cmd){
+	char *user_shell = m_strdup("/bin/sh");
 
 	int pid = fork();
 	if (pid < 0) {
@@ -1086,12 +1073,11 @@ void shellexeccommand(char * shellcmd){
 	}
 	if (!pid) {
 		/* child */
-		run_shell_command(shellcmd,1024,usershell);
+		run_shell_command(shell_cmd,1024,user_shell);
 	}
 	else{/*parent*/
 		//wait until child exit the exec before return
 		wait(NULL); 
-		// printf("FINISH SHELLECECCOMMAND!\n");
 	}
 
 }

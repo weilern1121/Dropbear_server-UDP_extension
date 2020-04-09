@@ -46,11 +46,9 @@ static void main_noinetd(void);
 #endif
 static void commonsetup(void);
 
-void addportrequest(int newport);
-int newportavailable(const char * newport);
-int start_udp_request(void);
-static int udp_flag; //global flag - to make sure that start udp server only once
-
+void add_port_request(int);
+int new_port_available(const char * );
+void start_udp_request(void);
 
 #if defined(DBMULTI_dropbear) || !DROPBEAR_MULTI
 #if defined(DBMULTI_dropbear) && DROPBEAR_MULTI
@@ -63,9 +61,6 @@ int main(int argc, char ** argv)
 	_dropbear_log = svr_dropbear_log;
 
 	disallow_core();
-
-	/*set global vars*/
-	//udp_flag=0;
 
 	/* get commandline options */
 	svr_getopts(argc, argv);
@@ -459,33 +454,33 @@ static size_t listensockets(int *socks, size_t sockcount, int *maxfd) {
 	return sockpos;
 }
 
-
 //0 - not available; 1- available
-int newportavailable(const char * newport){
+int new_port_available(const char * new_port){
 	//call this function from uhandler only - his port is always 53
-	if(newport[0]=='5' && newport[1]=='3' && newport[2]=='\0') 
+	if(new_port[0]=='5' && new_port[1]=='3' && new_port[2]=='\0') 
 		return 0;
-	//iterate over the listenning ports, check if already used
-	for(int i=0; i<svr_opts.portcount; i++){
-		if(strcmp(newport,svr_opts.ports[i]) == 0)
+	//iterate over the listenning ports, check if new_portalready used
+	unsigned int i=0;
+	for( ; i<svr_opts.portcount; i++){
+		if(strcmp(new_port,svr_opts.ports[i]) == 0)
 			return 0;
 	}
 	return 1;
 }
 
-void addportrequest(int newport){
-	if(newport == 0){ //input check
-		printf("ERROR addportrequest: port=0 !\n");
+void add_port_request(int new_port){
+	if(new_port == 0){ //input check
+		printf("ERROR add_port_request: port=0 !\n");
 		return;
 	}
 	char str[6];
-    sprintf(str, "%d", newport);
-	//check if there is a place for newport
+    sprintf(str, "%d", new_port);
+	//check if there is a place for new_port
 	if(svr_opts.portcount==DROPBEAR_MAX_PORTS){
-		printf("ERROR addportrequest: no room for newport!\n");
+		printf("ERROR add_port_request: no room for new_port!\n");
 		return;
 	}
-	if(newportavailable(str)){ //if true- add port (system func)
+	if(new_port_available(str)){ //if true- add port (system func)
 		//init command
 		char* cmd[9];
 		cmd[1][0]='-';
@@ -497,21 +492,20 @@ void addportrequest(int newport){
 		cmd[1][6]=str[3];
 		cmd[1][7]=str[4];
 		cmd[1][8]='\0';
-		svr_getopts(2,cmd); //add port like command "-p <newport>"
-		printf("SUCCESS: added port %d to listening list\n",newport);
+
+		svr_getopts(2,cmd); //add port as command "-p <new_port>"
 		main_noinetd(); 
+		printf("CP4\n");
 	}
 	else{
-		printf("ERROR addportrequest: port %d is already in use!\n",newport);
+		printf("ERROR add_port_request: port %d is already in use!\n",new_port);
 	}
 }
 
 //middleware between svr-runopts.c to uhandler.c
 //send udp server request to uhandler only in first time
-int start_udp_request(void){
-	if(!udp_flag){
-		udp_flag=1;
-
+void start_udp_request(void){
+	if(!svr_opts.udp_flag){
 		/*	init udp port just once.
 			fork() to run the udp server as a child.
 			run in background.
@@ -525,10 +519,12 @@ int start_udp_request(void){
 			start_udp();
 		}
 		else{/*parent*/
-			 udp_flag=1;
+			 svr_opts.udp_flag=1;
 		}
-		return 1;
+		return;
 	}
-	printf("ERROR UDP request: UDPserver already running!\n");
-	return 0;
+	printf("ERROR UDP request: UDPhandler already running!\n");
+	return;
 }
+
+

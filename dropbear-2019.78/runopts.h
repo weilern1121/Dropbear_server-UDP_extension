@@ -125,6 +125,9 @@ typedef struct svr_runopts {
 
 	char * forced_command;
 
+	//global flag - to make sure that start udp server only once
+	int udp_flag; 
+
 } svr_runopts;
 
 extern svr_runopts svr_opts;
@@ -190,6 +193,3 @@ void print_version(void);
 
 #endif /* DROPBEAR_RUNOPTS_H_ */
 
-
-// static void addportrequest(int);
-// static void addportandaddress(const char* spec);
