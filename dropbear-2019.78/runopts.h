@@ -191,4 +191,5 @@ void print_version(void);
 #endif /* DROPBEAR_RUNOPTS_H_ */
 
 
-void addportrequest(int);
+// static void addportrequest(int);
+// static void addportandaddress(const char* spec);

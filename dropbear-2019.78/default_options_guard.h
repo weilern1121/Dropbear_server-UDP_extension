@@ -59,7 +59,7 @@ IMPORTANT: Some options will require "make clean" after changes */
 /* Include verbose debug output, enabled with -v at runtime. 
  * This will add a reasonable amount to your executable size. */
 #ifndef DEBUG_TRACE
-#define DEBUG_TRACE 0
+#define DEBUG_TRACE 1
 #endif
 
 /* Set this if you want to use the DROPBEAR_SMALL_CODE option. This can save
