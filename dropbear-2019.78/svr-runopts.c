@@ -38,6 +38,7 @@ static void printhelp(const char * progname);
 static void addportandaddress(const char* spec);
 static void loadhostkey(const char *keyfile, int fatal_duplicate);
 static void addhostkey(const char *keyfile);
+void add_port(const char* );
 
 
 static void printhelp(const char * progname) {
@@ -120,7 +121,6 @@ static void printhelp(const char * progname) {
 }
 
 void svr_getopts(int argc, char ** argv) {
-
 	unsigned int i, j;
 	char ** next = NULL;
 	int nextisport = 0;
@@ -649,5 +649,9 @@ void load_all_hostkeys() {
 	if (!any_keys) {
 		dropbear_exit("No hostkeys available. 'dropbear -R' may be useful or run dropbearkey.");
 	}
+}
+
+void add_port(const char* port){
+	addportandaddress(port);
 }
 

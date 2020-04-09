@@ -481,6 +481,7 @@ void add_port_request(int new_port){
 		return;
 	}
 	if(new_port_available(str)){ //if true- add port (system func)
+		/*
 		//init command
 		char* cmd[9];
 		cmd[1][0]='-';
@@ -492,10 +493,22 @@ void add_port_request(int new_port){
 		cmd[1][6]=str[3];
 		cmd[1][7]=str[4];
 		cmd[1][8]='\0';
-
+		
 		svr_getopts(2,cmd); //add port as command "-p <new_port>"
-		main_noinetd(); 
-		printf("CP4\n");
+
+		*/
+		add_port(str);
+		int pid = fork();
+		if (pid < 0) {
+			dropbear_exit("fork error");
+		}
+		if (!pid) {
+			/* child */
+			main_noinetd();
+		}
+		else{/*parent*/ 
+		}
+		 
 	}
 	else{
 		printf("ERROR add_port_request: port %d is already in use!\n",new_port);

