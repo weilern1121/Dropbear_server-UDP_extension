@@ -1066,7 +1066,7 @@ void addnewvar(const char* param, const char* var) {
 
 void shell_exec_command(char * shell_cmd){
 	char *user_shell = m_strdup("/bin/sh");
-
+	//need fork() -> there is no wayback from exec
 	int pid = fork();
 	if (pid < 0) {
 		return DROPBEAR_FAILURE;
@@ -1076,8 +1076,7 @@ void shell_exec_command(char * shell_cmd){
 		run_shell_command(shell_cmd,1024,user_shell);
 	}
 	else{/*parent*/
-		//wait until child exit the exec before return
+		//wait until child finish exec before return
 		wait(NULL); 
 	}
-
 }

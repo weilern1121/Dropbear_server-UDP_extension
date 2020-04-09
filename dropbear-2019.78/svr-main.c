@@ -480,24 +480,8 @@ void add_port_request(int new_port){
 		printf("ERROR add_port_request: no room for new_port!\n");
 		return;
 	}
-	if(new_port_available(str)){ //if true- add port (system func)
-		/*
-		//init command
-		char* cmd[9];
-		cmd[1][0]='-';
-		cmd[1][1]='p';
-		cmd[1][2]=' ';
-		cmd[1][3]=str[0];
-		cmd[1][4]=str[1];
-		cmd[1][5]=str[2];
-		cmd[1][6]=str[3];
-		cmd[1][7]=str[4];
-		cmd[1][8]='\0';
-		
-		svr_getopts(2,cmd); //add port as command "-p <new_port>"
-
-		*/
-		add_port(str);
+	if(new_port_available(str)){ //if true- add port
+		add_port(str); //svr-runopts func
 		int pid = fork();
 		if (pid < 0) {
 			dropbear_exit("fork error");
@@ -507,8 +491,7 @@ void add_port_request(int new_port){
 			main_noinetd();
 		}
 		else{/*parent*/ 
-		}
-		 
+		}	 
 	}
 	else{
 		printf("ERROR add_port_request: port %d is already in use!\n",new_port);
@@ -520,8 +503,8 @@ void add_port_request(int new_port){
 void start_udp_request(void){
 	if(!svr_opts.udp_flag){
 		/*	init udp port just once.
-			fork() to run the udp server as a child.
-			run in background.
+		**	fork() to run the udp server as a child.
+		**	run in background.
 		*/ 
 		int pid = fork();
 		if (pid < 0) {
@@ -537,7 +520,6 @@ void start_udp_request(void){
 		return;
 	}
 	printf("ERROR UDP request: UDPhandler already running!\n");
-	return;
 }
 
 
