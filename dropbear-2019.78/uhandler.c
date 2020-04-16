@@ -7,6 +7,7 @@
 #include <sys/socket.h> 
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
+#include <pthread.h>
 #include "uhandler.h"
 #include "session.h"
 
@@ -19,7 +20,6 @@ void parse_packet(listen_packet_t *,char *);
 void parse_error (listen_packet_t *,char *);
 int check_shell_command(listen_packet_t *);
 int num_parse(char *, int );
-
 
 int check_shell_command(listen_packet_t * packet){
     if(!packet)
@@ -61,7 +61,8 @@ void parse_packet(listen_packet_t *new_packet,char *buffer){
     
 }
   
-void start_udp() {
+void *start_udp() {
+    printf("RUNNING UDP REQUESTS!\n");
     int sockfd;
     char buffer[BUFFERSIZE]; 
     struct sockaddr_in servaddr, cliaddr;
@@ -70,7 +71,8 @@ void start_udp() {
     // Creating socket file descriptor 
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
         perror("socket creation failed"); 
-        return; //close the uhandler, not kill the procces 
+        pthread_exit(NULL); 
+        //return; //close the uhandler, not kill the procces 
     } 
 
     //set reuse this port if port status is waiting
@@ -91,7 +93,8 @@ void start_udp() {
             sizeof(servaddr)) < 0 ) 
     { 
         perror("bind failed"); 
-        return;
+        pthread_exit(NULL); 
+        //return;
     }
     
     while(1){

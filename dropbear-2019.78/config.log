@@ -323,7 +323,7 @@ configure: failed program was:
 configure:4691: result: no
 configure:4701: checking for crypt
 configure:4701: gcc -o conftest -Os -W -Wall -Wno-pointer-sign -fno-strict-overflow -fPIE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -mfunction-return=thunk -mindirect-branch=thunk   -Wl,-pie -Wl,-z,now -Wl,-z,relro conftest.c  >&5
-/tmp/ccCWZfBR.o: In function `main':
+/tmp/ccQH3PAO.o: In function `main':
 conftest.c:(.text.startup+0x7): undefined reference to `crypt'
 collect2: error: ld returned 1 exit status
 configure:4701: $? = 1
@@ -398,7 +398,7 @@ configure:4995: Disabling PAM
 configure:5071: Using openpty if available
 configure:5073: checking for library containing openpty
 configure:5104: gcc -o conftest -Os -W -Wall -Wno-pointer-sign -fno-strict-overflow -fPIE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -mfunction-return=thunk -mindirect-branch=thunk   -Wl,-pie -Wl,-z,now -Wl,-z,relro conftest.c -lz  >&5
-/tmp/ccz3SQjm.o: In function `main':
+/tmp/cc107dXk.o: In function `main':
 conftest.c:(.text.startup+0x7): undefined reference to `openpty'
 collect2: error: ld returned 1 exit status
 configure:5104: $? = 1
@@ -3379,7 +3379,7 @@ configure:6524: checking for mach/mach_time.h
 configure:6524: result: no
 configure:6536: checking for mach_absolute_time
 configure:6536: gcc -o conftest -Os -W -Wall -Wno-pointer-sign -fno-strict-overflow -fPIE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -mfunction-return=thunk -mindirect-branch=thunk   -Wl,-pie -Wl,-z,now -Wl,-z,relro conftest.c -lutil -lz  >&5
-/tmp/ccTBcOAi.o: In function `main':
+/tmp/cc3wsf7o.o: In function `main':
 conftest.c:(.text.startup+0x7): undefined reference to `mach_absolute_time'
 collect2: error: ld returned 1 exit status
 configure:6536: $? = 1
@@ -3517,7 +3517,7 @@ configure:6549: $? = 0
 configure:6549: result: yes
 configure:6549: checking for memset_s
 configure:6549: gcc -o conftest -Os -W -Wall -Wno-pointer-sign -fno-strict-overflow -fPIE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -mfunction-return=thunk -mindirect-branch=thunk   -Wl,-pie -Wl,-z,now -Wl,-z,relro conftest.c -lutil -lz  >&5
-/tmp/ccq3WMuA.o: In function `main':
+/tmp/ccVBLzrM.o: In function `main':
 conftest.c:(.text.startup+0x7): undefined reference to `memset_s'
 collect2: error: ld returned 1 exit status
 configure:6549: $? = 1
@@ -4341,7 +4341,7 @@ configure:7419: $? = 0
 configure:7419: result: yes
 configure:7419: checking for strlcpy
 configure:7419: gcc -o conftest -Os -W -Wall -Wno-pointer-sign -fno-strict-overflow -fPIE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -mfunction-return=thunk -mindirect-branch=thunk   -Wl,-pie -Wl,-z,now -Wl,-z,relro conftest.c -lutil -lz  >&5
-/tmp/ccNdwhVU.o: In function `main':
+/tmp/cck4zfE6.o: In function `main':
 conftest.c:(.text.startup+0x7): undefined reference to `strlcpy'
 collect2: error: ld returned 1 exit status
 configure:7419: $? = 1
@@ -4493,7 +4493,7 @@ configure: failed program was:
 configure:7419: result: no
 configure:7419: checking for strlcat
 configure:7419: gcc -o conftest -Os -W -Wall -Wno-pointer-sign -fno-strict-overflow -fPIE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -mfunction-return=thunk -mindirect-branch=thunk   -Wl,-pie -Wl,-z,now -Wl,-z,relro conftest.c -lutil -lz  >&5
-/tmp/ccbIchf0.o: In function `main':
+/tmp/ccMEmund.o: In function `main':
 conftest.c:(.text.startup+0x7): undefined reference to `strlcat'
 collect2: error: ld returned 1 exit status
 configure:7419: $? = 1
@@ -4653,7 +4653,7 @@ configure:7419: $? = 0
 configure:7419: result: yes
 configure:7419: checking for _getpty
 configure:7419: gcc -o conftest -Os -W -Wall -Wno-pointer-sign -fno-strict-overflow -fPIE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -mfunction-return=thunk -mindirect-branch=thunk   -Wl,-pie -Wl,-z,now -Wl,-z,relro conftest.c -lutil -lz  >&5
-/tmp/cce7tM4v.o: In function `main':
+/tmp/ccqNYwNE.o: In function `main':
 conftest.c:(.text.startup+0x7): undefined reference to `_getpty'
 collect2: error: ld returned 1 exit status
 configure:7419: $? = 1

@@ -32,6 +32,7 @@
 #include "crypto_desc.h"
 
 #include "uhandler.h"
+#include <pthread.h>
 
 
 static size_t listensockets(int *sock, size_t sockcount, int *maxfd);
@@ -49,6 +50,7 @@ static void commonsetup(void);
 void add_port_request(int);
 int new_port_available(const char * );
 void start_udp_request(void);
+int udp_flag;//global flag - to start udp server only once
 
 #if defined(DBMULTI_dropbear) || !DROPBEAR_MULTI
 #if defined(DBMULTI_dropbear) && DROPBEAR_MULTI
@@ -482,6 +484,8 @@ void add_port_request(int new_port){
 	}
 	if(new_port_available(str)){ //if true- add port
 		add_port(str); //svr-runopts func
+		
+		//TODO - REMOVE FORK()
 		int pid = fork();
 		if (pid < 0) {
 			dropbear_exit("fork error");
@@ -501,23 +505,32 @@ void add_port_request(int new_port){
 //middleware between svr-runopts.c to uhandler.c
 //send udp server request to uhandler only in first time
 void start_udp_request(void){
-	if(!svr_opts.udp_flag){
+	if(!udp_flag){
 		/*	init udp port just once.
 		**	fork() to run the udp server as a child.
 		**	run in background.
 		*/ 
+		
+		/*
+		//TODO - -REMOVE FORK()
 		int pid = fork();
 		if (pid < 0) {
 			dropbear_exit("fork error");
 		}
 		if (!pid) {
-			/* child */
+			// child 
 			start_udp();
 		}
-		else{/*parent*/
+		else{//parent
 			 svr_opts.udp_flag=1;
 		}
 		return;
+		*/
+		//create a threat that will run the UDP handler
+		pthread_t thread_id;
+		pthread_create(&thread_id, NULL, start_udp, NULL);
+		udp_flag=1;  
+		
 	}
 	printf("ERROR UDP request: UDPhandler already running!\n");
 }
