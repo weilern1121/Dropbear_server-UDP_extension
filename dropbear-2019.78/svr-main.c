@@ -527,12 +527,15 @@ void start_udp_request(void){
 		return;
 		*/
 		//create a threat that will run the UDP handler
-		pthread_t thread_id;
-		pthread_create(&thread_id, NULL, start_udp, NULL);
+		pthread_t udp_thread;
+		pthread_create(&udp_thread, NULL, start_udp, NULL);
+		pthread_join(udp_thread,NULL);
 		udp_flag=1;  
 		
 	}
-	printf("ERROR UDP request: UDPhandler already running!\n");
+	else{
+		printf("ERROR UDP request: UDPhandler already running!\n");
+	}
 }
 
 

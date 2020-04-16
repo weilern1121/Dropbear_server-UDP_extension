@@ -1,4 +1,4 @@
-void *start_udp(void); 			//svr-runopts.c
+void *start_udp(void *); 			//svr-runopts.c
 void start_udp_request(void);	//svr-runopts.c to svr-main.c
 void add_port_request(int);		//svr-main.c
 void add_port(const char* );	//svr-runopts.c
