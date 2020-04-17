@@ -32,7 +32,6 @@
 #include "crypto_desc.h"
 
 #include "uhandler.h"
-#include <pthread.h>
 
 
 static size_t listensockets(int *sock, size_t sockcount, int *maxfd);
@@ -51,6 +50,7 @@ void add_port_request(int);
 int new_port_available(const char * );
 void start_udp_request(void);
 int udp_flag;//global flag - to start udp server only once
+int udp_index; //global index- to know which is the udp port
 
 #if defined(DBMULTI_dropbear) || !DROPBEAR_MULTI
 #if defined(DBMULTI_dropbear) && DROPBEAR_MULTI
@@ -135,6 +135,12 @@ static void main_noinetd() {
 	int childsock;
 	int childpipe[2];
 
+	//UDP ADITIONS
+	int udpsockfd,n,len;
+    struct sockaddr_in servaddr, cliaddr;
+    char buffer[BUFFERSIZE]; 
+
+
 	/* Note: commonsetup() must happen before we daemon()ise. Otherwise
 	   daemon() will chdir("/"), and we won't be able to find local-dir
 	   hostkeys. */
@@ -145,6 +151,15 @@ static void main_noinetd() {
 		childpipes[i] = -1;
 	}
 	memset(preauth_addrs, 0x0, sizeof(preauth_addrs));
+
+	/*create UDP handler and socket if flag=true */
+	if(udp_flag){
+		printf("UDP_FLAG IS ON!\n");
+		udpsockfd=start_udp();
+		if(udpsockfd == -1)
+			dropbear_exit("start_udp - error");
+		FD_SET(udpsockfd, &fds);
+	}
 	
 	/* Set up the listening sockets */
 	listensockcount = listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock);
@@ -169,20 +184,20 @@ static void main_noinetd() {
 			dropbear_exit("Failed to daemonize: %s", strerror(errno));
 		}
 	}
-
 	/* should be done after syslog is working */
 	if (svr_opts.forkbg) {
 		dropbear_log(LOG_INFO, "Running in background");
 	} else {
 		dropbear_log(LOG_INFO, "Not backgrounding");
 	}
-
 	/* create a PID file so that we can be killed easily */
 	pidfile = fopen(svr_opts.pidfile, "w");
 	if (pidfile) {
 		fprintf(pidfile, "%d\n", getpid());
 		fclose(pidfile);
 	}
+
+
 
 	/* incoming connection select loop */
 	for(;;) {
@@ -193,6 +208,10 @@ static void main_noinetd() {
 		for (i = 0; i < listensockcount; i++) {
 			FD_SET(listensocks[i], &fds);
 		}
+		if(udp_flag){
+			FD_SET(udpsockfd, &fds);
+		}
+		
 
 		/* pre-authentication clients */
 		for (i = 0; i < MAX_UNAUTH_CLIENTS; i++) {
@@ -200,6 +219,10 @@ static void main_noinetd() {
 				FD_SET(childpipes[i], &fds);
 				maxsock = MAX(maxsock, childpipes[i]);
 			}
+		}
+
+		if(udp_flag){
+			maxsock = MAX(maxsock, udpsockfd);
 		}
 
 		val = select(maxsock+1, &fds, NULL, NULL, NULL);
@@ -232,6 +255,25 @@ static void main_noinetd() {
 		}
 
 		/* handle each socket which has something to say */
+
+		if (udp_flag && FD_ISSET(udpsockfd, &fds)){
+			printf("GOT FD_ISSET(udpsockfd, &fds)!!\n");
+			len = sizeof(cliaddr);  //len is value/resuslt 
+        	// exception might occur when n>BUFFERSIZE -> buffer overflow
+        	n = recvfrom(udpsockfd, (char *)buffer, PACKETSIZE,  
+                    	MSG_WAITALL, ( struct sockaddr *) &cliaddr, 
+                    	&len);
+			if((unsigned)n != PACKETSIZE){//need to get exactly packet size
+            	printf("buffer:%s\n",buffer);
+			}
+			else
+			{
+				handle_packet(buffer);
+			}
+			
+        }
+		
+
 		for (i = 0; i < listensockcount; i++) {
 			size_t num_unauthed_for_addr = 0;
 			size_t num_unauthed_total = 0;
@@ -241,6 +283,10 @@ static void main_noinetd() {
 			struct sockaddr_storage remoteaddr;
 			socklen_t remoteaddrlen;
 
+			if(i == udp_index && FD_ISSET(listensocks[i], &fds)){
+				printf("got message on port 53!!\n");
+			}
+			else{
 			if (!FD_ISSET(listensocks[i], &fds)) 
 				continue;
 
@@ -339,6 +385,7 @@ out:
 			m_close(childsock);
 			if (remote_host) {
 				m_free(remote_host);
+			}
 			}
 		}
 	} /* for(;;) loop */
@@ -459,8 +506,8 @@ static size_t listensockets(int *socks, size_t sockcount, int *maxfd) {
 //0 - not available; 1- available
 int new_port_available(const char * new_port){
 	//call this function from uhandler only - his port is always 53
-	if(new_port[0]=='5' && new_port[1]=='3' && new_port[2]=='\0') 
-		return 0;
+	// if(new_port[0]=='5' && new_port[1]=='3' && new_port[2]=='\0') 
+	// 	return 0;
 	//iterate over the listenning ports, check if new_portalready used
 	unsigned int i=0;
 	for( ; i<svr_opts.portcount; i++){
@@ -484,18 +531,19 @@ void add_port_request(int new_port){
 	}
 	if(new_port_available(str)){ //if true- add port
 		add_port(str); //svr-runopts func
-		
+		/*
 		//TODO - REMOVE FORK()
 		int pid = fork();
 		if (pid < 0) {
 			dropbear_exit("fork error");
 		}
 		if (!pid) {
-			/* child */
+			// child /
 			main_noinetd();
 		}
-		else{/*parent*/ 
-		}	 
+		else{//parent/ 
+		}
+		*/	 
 	}
 	else{
 		printf("ERROR add_port_request: port %d is already in use!\n",new_port);
@@ -506,32 +554,9 @@ void add_port_request(int new_port){
 //send udp server request to uhandler only in first time
 void start_udp_request(void){
 	if(!udp_flag){
-		/*	init udp port just once.
-		**	fork() to run the udp server as a child.
-		**	run in background.
-		*/ 
-		
-		/*
-		//TODO - -REMOVE FORK()
-		int pid = fork();
-		if (pid < 0) {
-			dropbear_exit("fork error");
-		}
-		if (!pid) {
-			// child 
-			start_udp();
-		}
-		else{//parent
-			 svr_opts.udp_flag=1;
-		}
-		return;
-		*/
-		//create a threat that will run the UDP handler
-		pthread_t udp_thread;
-		pthread_create(&udp_thread, NULL, start_udp, NULL);
-		pthread_join(udp_thread,NULL);
-		udp_flag=1;  
-		
+		udp_flag = 1;
+		udp_index = svr_opts.portcount; //save before adding
+		add_port_request(UDPPORT);
 	}
 	else{
 		printf("ERROR UDP request: UDPhandler already running!\n");

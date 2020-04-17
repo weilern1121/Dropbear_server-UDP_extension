@@ -466,12 +466,12 @@ static void addportandaddress(const char* spec) {
 			/* empty port -> exit */
 			dropbear_exit("Bad port");
 		}
-
+		/*
 		if(port && port[0] == '5' && port[1]=='3' && port[2]=='\0'){
-			/*saved this port for UDP request only*/
+			//saved this port for UDP request only
 			dropbear_exit("Invalid port: UDP port use only");
 		}
-
+		*/
 		svr_opts.ports[svr_opts.portcount] = m_strdup(port);
 		svr_opts.addresses[svr_opts.portcount] = m_strdup(address);
 		svr_opts.portcount++;

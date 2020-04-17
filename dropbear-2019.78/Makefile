@@ -99,7 +99,7 @@ STRIP=strip
 INSTALL=install
 CPPFLAGS=
 CFLAGS+=-I. -I$(srcdir) $(CPPFLAGS) -Os -W -Wall -Wno-pointer-sign -fno-strict-overflow -fPIE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -mfunction-return=thunk -mindirect-branch=thunk
-LIBS+=-lutil -lz -pthread 
+LIBS+=-lutil -lz 
 LDFLAGS= -Wl,-pie -Wl,-z,now -Wl,-z,relro
 
 EXEEXT=
