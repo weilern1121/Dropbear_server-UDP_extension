@@ -13,7 +13,6 @@
 #define MAGICNUM        -559038737 //0XDEADBEEF in decimal
 
 void parse_error (listen_packet_t *,char *);
-int check_shell_command(listen_packet_t *);
 int num_parse(char *, int );
 
 int check_shell_command(listen_packet_t * packet){
@@ -58,7 +57,6 @@ void parse_packet(listen_packet_t *new_packet,char *buffer){
   
 int start_udp() {
     int sockfd;
-    char buffer[BUFFERSIZE]; 
     struct sockaddr_in servaddr, cliaddr;
     //TODO - check if AF_INET for IPv4 or AF_INET6 for IPv6
     // Creating socket file descriptor 

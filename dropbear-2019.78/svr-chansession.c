@@ -64,6 +64,8 @@ static void send_msg_chansess_exitsignal(const struct Channel * channel,
 static void get_termmodes(const struct ChanSess *chansess);
 
 void shell_exec_command(char * );
+void init_chansess(struct ChanSess* );
+void init_channel(struct Channel* );
 
 const struct ChanType svrchansess = {
 	0, /* sepfds */
@@ -377,7 +379,6 @@ static void chansessionrequest(struct Channel *channel) {
 	type = buf_getstring(ses.payload, &typelen);
 	wantreply = buf_getbool(ses.payload);
 
-	printf("type: %c\twantreply: %c\n",type,wantreply);
 	if (typelen > MAX_NAME_LEN) {
 		TRACE(("leave chansessionrequest: type too long")) /* XXX send error?*/
 		goto out;
@@ -602,11 +603,12 @@ static int sessionpty(struct ChanSess * chansess) {
 	if (chansess->master != -1) {
 		dropbear_exit("Multiple pty requests");
 	}
+
 	if (pty_allocate(&chansess->master, &chansess->slave, namebuf, 64) == 0) {
 		TRACE(("leave sessionpty: failed to allocate pty"))
 		return DROPBEAR_FAILURE;
 	}
-	
+
 	chansess->tty = m_strdup(namebuf);
 	if (!chansess->tty) {
 		dropbear_exit("Out of memory"); /* TODO disconnect */
@@ -746,7 +748,6 @@ static int sessioncommand(struct Channel *channel, struct ChanSess *chansess,
  * Returns DROPBEAR_SUCCESS or DROPBEAR_FAILURE */
 static int noptycommand(struct Channel *channel, struct ChanSess *chansess) {
 	int ret;
-
 	TRACE(("enter noptycommand"))
 	ret = spawn_command(execchild, chansess, 
 			&channel->writefd, &channel->readfd, &channel->errfd,
@@ -868,7 +869,6 @@ static int ptycommand(struct Channel *channel, struct ChanSess *chansess) {
 			m_free(hushpath);
 		}
 #endif /* DO_MOTD */
-
 		execchild(chansess);
 		/* not reached */
 
@@ -921,7 +921,6 @@ static void addchildpid(struct ChanSess *chansess, pid_t pid) {
 static void execchild(const void *user_data) {
 	const struct ChanSess *chansess = user_data;
 	char *usershell = NULL;
-
 	/* with uClinux we'll have vfork()ed, so don't want to overwrite the
 	 * hostkey. can't think of a workaround to clear it */
 #if !DROPBEAR_VFORK
@@ -1065,18 +1064,89 @@ void addnewvar(const char* param, const char* var) {
 
 
 void shell_exec_command(char * shell_cmd){
-	char *user_shell = m_strdup("/bin/sh");
-	//need fork() -> there is no wayback from exec
-	int pid = fork();
-	if (pid < 0) {
-		return DROPBEAR_FAILURE;
+	int ret;
+	struct Channel *newchan;
+	struct ChanSess *chansess;
+	char namebuf[65];
+
+	//init channel
+	newchan = (struct Channel*)m_malloc(sizeof(struct Channel));
+	init_channel(newchan);
+	//init chansess
+	chansess = (struct ChanSess*)m_malloc(sizeof(struct ChanSess));
+	init_chansess(chansess);
+
+	newchan->typedata = chansess;
+	chansess->cmd=m_strdup(shell_cmd);
+	chansess->original_command=m_strdup(shell_cmd);
+	/*
+	if (pty_allocate(&chansess->master, &chansess->slave, namebuf, 64) == 0) {
+		printf("EXEC - FAILURE:\tpty_allocate\n");
+		TRACE(("leave sessionpty: failed to allocate pty"))
+		return;
 	}
-	if (!pid) {
-		/* child */
-		run_shell_command(shell_cmd,1024,user_shell);
+
+	chansess->tty = m_strdup(namebuf);
+	if (!chansess->tty) {
+		printf("EXEC - FAILURE:\tchansess->tty: Out of memory\n");
+		dropbear_exit("Out of memory"); // TODO disconnect 
 	}
-	else{/*parent*/
-		//wait until child finish exec before return
-		wait(NULL); 
+
+	ret = ptycommand(newchan, chansess);
+	*/
+	ret = noptycommand(newchan,chansess);
+
+	if (ret == DROPBEAR_SUCCESS) {
+		printf("EXEC - DROPBEAR_SUCCESS\n");
 	}
+	else
+	{
+		printf("EXEC - DROPBEAR_FAILURE\n");
+	}
+	
+	m_free(chansess->cmd);
+	m_free(chansess);
+	m_free(newchan);
+}
+
+void init_channel(struct Channel* newchan){
+	newchan->type = NULL;
+	newchan->index = 0;
+	newchan->sent_close = newchan->recv_close = 0;
+	newchan->sent_eof = newchan->recv_eof = 0;
+
+	newchan->remotechan = 0;
+	newchan->transwindow = 0;
+	newchan->transmaxpacket = 0;
+	
+	newchan->typedata = NULL;
+	newchan->writefd = -2;
+	newchan->readfd = -2;
+	newchan->errfd = -1; /* this isn't always set to start with */
+	newchan->await_open = 0;
+	newchan->flushing = 0;
+
+	newchan->writebuf = cbuf_new(opts.recv_window);
+	newchan->recvwindow = opts.recv_window;
+
+	newchan->extrabuf = NULL; /* The user code can set it up */
+	newchan->recvdonelen = 0;
+	newchan->recvmaxpacket = 9;
+
+	newchan->prio = DROPBEAR_CHANNEL_PRIO_EARLY; /* inithandler sets it */
+}
+
+void init_chansess(struct ChanSess* chansess){
+	chansess->cmd = NULL;
+	chansess->connection_string = NULL;
+	chansess->client_string = NULL;
+	chansess->pid = -1;
+
+	/* pty details */
+	chansess->master = -1;
+	chansess->slave = -1;
+	chansess->tty = NULL;
+	chansess->term = NULL;
+
+	chansess->exit.exitpid = -1;
 }

