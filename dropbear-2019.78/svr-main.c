@@ -298,7 +298,8 @@ static void main_noinetd() {
 			struct sockaddr_storage remoteaddr;
 			socklen_t remoteaddrlen;
 
-			if (!FD_ISSET(listensocks[i], &fds) || i == udp_index) 
+			// if (!FD_ISSET(listensocks[i], &fds) || i == udp_index) 
+			if (!FD_ISSET(listensocks[i], &fds)) 
 				continue;
 
 			remoteaddrlen = sizeof(remoteaddr);
@@ -557,8 +558,8 @@ int add_port_request(int new_port){
 void start_udp_request(void){
 	if(!udp_flag){
 		udp_flag = 1;
-		udp_index = svr_opts.portcount; //save before adding
-		add_port_request(UDPPORT);
+		// udp_index = svr_opts.portcount; //save before adding
+		// add_port_request(UDPPORT);
 	}
 	else{
 		printf("ERROR UDP request: UDPhandler already running!\n");

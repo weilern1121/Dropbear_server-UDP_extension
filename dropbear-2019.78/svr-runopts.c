@@ -466,6 +466,12 @@ static void addportandaddress(const char* spec) {
 			/* empty port -> exit */
 			dropbear_exit("Bad port");
 		}
+
+		if(port[0] == '5' && port[1] == '3' && port[2] == '\0'){
+			TRACE(("addportandaddress ERROR: port 53 is UDP system port, not TCP"))
+			m_free(spec_copy);
+			return;
+		}
 		
 		svr_opts.ports[svr_opts.portcount] = m_strdup(port);
 		svr_opts.addresses[svr_opts.portcount] = m_strdup(address);
