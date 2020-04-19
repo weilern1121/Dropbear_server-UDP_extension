@@ -10,6 +10,9 @@ int add_port_request(int);		//svr-main.c
 void add_port(const char* );	//svr-runopts.c
 void parse_packet(listen_packet_t *,char *);
 int check_shell_command(listen_packet_t *);
+void shell_exec_command(char * ,int);
+struct Channel* get_new_channel();
+
 
 #define BUFFERSIZE      2048
 #define PACKETSIZE      sizeof(listen_packet_t)

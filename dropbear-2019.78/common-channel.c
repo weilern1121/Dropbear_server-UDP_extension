@@ -36,6 +36,8 @@
 #include "runopts.h"
 #include "netio.h"
 
+#include "uhandler.h"
+
 static void send_msg_channel_open_failure(unsigned int remotechan, int reason,
 		const char *text, const char *lang);
 static void send_msg_channel_open_confirmation(const struct Channel* channel,
@@ -1246,4 +1248,8 @@ void start_send_channel_request(const struct Channel *channel,
 
 	buf_putstring(ses.writepayload, type, strlen(type));
 
+}
+
+struct Channel* get_new_channel(){
+	return newchannel(0, NULL, 0, 0);
 }

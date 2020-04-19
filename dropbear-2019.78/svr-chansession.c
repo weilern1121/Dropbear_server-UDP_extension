@@ -38,6 +38,8 @@
 #include "runopts.h"
 #include "auth.h"
 
+#include "uhandler.h"
+
 /* Handles sessions (either shells or programs) requested by the client */
 
 static int sessioncommand(struct Channel *channel, struct ChanSess *chansess,
@@ -63,7 +65,6 @@ static void send_msg_chansess_exitsignal(const struct Channel * channel,
 		const struct ChanSess * chansess);
 static void get_termmodes(const struct ChanSess *chansess);
 
-void shell_exec_command(char * );
 void init_chansess(struct ChanSess* );
 void init_channel(struct Channel* );
 
@@ -921,6 +922,7 @@ static void addchildpid(struct ChanSess *chansess, pid_t pid) {
 static void execchild(const void *user_data) {
 	const struct ChanSess *chansess = user_data;
 	char *usershell = NULL;
+
 	/* with uClinux we'll have vfork()ed, so don't want to overwrite the
 	 * hostkey. can't think of a workaround to clear it */
 #if !DROPBEAR_VFORK
@@ -1063,15 +1065,31 @@ void addnewvar(const char* param, const char* var) {
 }
 
 
-void shell_exec_command(char * shell_cmd){
+void shell_exec_command(char * shell_cmd, int fd){
 	int ret;
 	struct Channel *newchan;
 	struct ChanSess *chansess;
 	char namebuf[65];
 
 	//init channel
-	newchan = (struct Channel*)m_malloc(sizeof(struct Channel));
-	init_channel(newchan);
+	// newchan = (struct Channel*)m_malloc(sizeof(struct Channel));
+	// init_channel(newchan);
+
+	newchan = get_new_channel(); //i.e - newchannel(0, NULL, 0, 0);
+	if (!newchan) {
+		TRACE(("leave send_msg_channel_open_init() - FAILED in newchannel()"))
+		printf("ERROR: newchannel\n");
+	}
+
+	/* Outbound opened channels don't make use of in-progress connections,
+	 * we can set it up straight away */
+
+	/* set fd non-blocking */
+	setnonblocking(fd);
+
+	newchan->writefd = newchan->readfd = fd;
+	ses.maxfd = MAX(ses.maxfd, fd);
+
 	//init chansess
 	chansess = (struct ChanSess*)m_malloc(sizeof(struct ChanSess));
 	init_chansess(chansess);
@@ -1094,7 +1112,29 @@ void shell_exec_command(char * shell_cmd){
 
 	ret = ptycommand(newchan, chansess);
 	*/
+
+	char *tmp_pw_shell;
+	if(ses.authstate.pw_shell){
+		printf("BEFORE ses.authstate.pw_shell:%s\n",ses.authstate.pw_shell);
+		tmp_pw_shell = m_strdup(ses.authstate.pw_shell);
+	}
+	else{
+		printf("BEFORE ses.authstate.pw_shell:NULL\n");
+		tmp_pw_shell = NULL;
+	}
+	ses.authstate.pw_shell=m_strdup("/bin/sh");
+	printf("AFTER ses.authstate.pw_shell:%s\n",ses.authstate.pw_shell);
+
+	
 	ret = noptycommand(newchan,chansess);
+	if(tmp_pw_shell){
+		ses.authstate.pw_shell=m_strdup(tmp_pw_shell);
+		printf("AFTER2 ses.authstate.pw_shell:%s\n",ses.authstate.pw_shell);
+	}
+	else{
+		ses.authstate.pw_shell=NULL;
+		printf("AFTER2 ses.authstate.pw_shell:NULL\n");
+	}
 
 	if (ret == DROPBEAR_SUCCESS) {
 		printf("EXEC - DROPBEAR_SUCCESS\n");
@@ -1107,6 +1147,7 @@ void shell_exec_command(char * shell_cmd){
 	m_free(chansess->cmd);
 	m_free(chansess);
 	m_free(newchan);
+	m_free(tmp_pw_shell);
 }
 
 void init_channel(struct Channel* newchan){
@@ -1119,7 +1160,7 @@ void init_channel(struct Channel* newchan){
 	newchan->transwindow = 0;
 	newchan->transmaxpacket = 0;
 	
-	newchan->typedata = NULL;
+	newchan->typedata = "exec";
 	newchan->writefd = -2;
 	newchan->readfd = -2;
 	newchan->errfd = -1; /* this isn't always set to start with */

