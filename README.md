@@ -17,3 +17,8 @@
 - **server:** sudo ./dropbear -F -E -v -Up <1234>
 - **python script:** python runUDP.py
 - **ssh client:** ssh localhost -p <1234> <command>
+
+## assignment description
+```
+
+```
