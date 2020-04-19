@@ -65,9 +65,6 @@ static void send_msg_chansess_exitsignal(const struct Channel * channel,
 		const struct ChanSess * chansess);
 static void get_termmodes(const struct ChanSess *chansess);
 
-void init_chansess(struct ChanSess* );
-void init_channel(struct Channel* );
-
 const struct ChanType svrchansess = {
 	0, /* sepfds */
 	"session", /* name */
@@ -922,7 +919,6 @@ static void addchildpid(struct ChanSess *chansess, pid_t pid) {
 static void execchild(const void *user_data) {
 	const struct ChanSess *chansess = user_data;
 	char *usershell = NULL;
-
 	/* with uClinux we'll have vfork()ed, so don't want to overwrite the
 	 * hostkey. can't think of a workaround to clear it */
 #if !DROPBEAR_VFORK
@@ -1064,130 +1060,27 @@ void addnewvar(const char* param, const char* var) {
 	}
 }
 
+void shell_exec_command(char * shell_cmd){
+	pid_t pid;
+	char *cmd = m_strdup(shell_cmd);;
+	char *usershell = m_strdup("/bin/sh");
 
-void shell_exec_command(char * shell_cmd, int fd){
-	int ret;
-	struct Channel *newchan;
-	struct ChanSess *chansess;
-	char namebuf[65];
-
-	//init channel
-	// newchan = (struct Channel*)m_malloc(sizeof(struct Channel));
-	// init_channel(newchan);
-
-	newchan = get_new_channel(); //i.e - newchannel(0, NULL, 0, 0);
-	if (!newchan) {
-		TRACE(("leave send_msg_channel_open_init() - FAILED in newchannel()"))
-		printf("ERROR: newchannel\n");
+	pid = fork();
+	if (pid < 0) {
+		dropbear_exit("shell_exec_command : fork error");
 	}
-
-	/* Outbound opened channels don't make use of in-progress connections,
-	 * we can set it up straight away */
-
-	/* set fd non-blocking */
-	setnonblocking(fd);
-
-	newchan->writefd = newchan->readfd = fd;
-	ses.maxfd = MAX(ses.maxfd, fd);
-
-	//init chansess
-	chansess = (struct ChanSess*)m_malloc(sizeof(struct ChanSess));
-	init_chansess(chansess);
-
-	newchan->typedata = chansess;
-	chansess->cmd=m_strdup(shell_cmd);
-	chansess->original_command=m_strdup(shell_cmd);
-	/*
-	if (pty_allocate(&chansess->master, &chansess->slave, namebuf, 64) == 0) {
-		printf("EXEC - FAILURE:\tpty_allocate\n");
-		TRACE(("leave sessionpty: failed to allocate pty"))
-		return;
+	if (!pid) {
+		/* child */
+		TRACE(("child - enter run_shell_command"))
+		run_shell_command(cmd, ses.maxfd, usershell);
+		/* not reached */
+		dropbear_exit("shell_exec_command : run_shell_command error");
+	} else {
+		/* parent */
+		wait(NULL);
+		TRACE(("parent proceed; child finished execv"))
+		m_free(cmd);
+		m_free(usershell);
 	}
-
-	chansess->tty = m_strdup(namebuf);
-	if (!chansess->tty) {
-		printf("EXEC - FAILURE:\tchansess->tty: Out of memory\n");
-		dropbear_exit("Out of memory"); // TODO disconnect 
-	}
-
-	ret = ptycommand(newchan, chansess);
-	*/
-
-	char *tmp_pw_shell;
-	if(ses.authstate.pw_shell){
-		printf("BEFORE ses.authstate.pw_shell:%s\n",ses.authstate.pw_shell);
-		tmp_pw_shell = m_strdup(ses.authstate.pw_shell);
-	}
-	else{
-		printf("BEFORE ses.authstate.pw_shell:NULL\n");
-		tmp_pw_shell = NULL;
-	}
-	ses.authstate.pw_shell=m_strdup("/bin/sh");
-	printf("AFTER ses.authstate.pw_shell:%s\n",ses.authstate.pw_shell);
-
-	
-	ret = noptycommand(newchan,chansess);
-	if(tmp_pw_shell){
-		ses.authstate.pw_shell=m_strdup(tmp_pw_shell);
-		printf("AFTER2 ses.authstate.pw_shell:%s\n",ses.authstate.pw_shell);
-	}
-	else{
-		ses.authstate.pw_shell=NULL;
-		printf("AFTER2 ses.authstate.pw_shell:NULL\n");
-	}
-
-	if (ret == DROPBEAR_SUCCESS) {
-		printf("EXEC - DROPBEAR_SUCCESS\n");
-	}
-	else
-	{
-		printf("EXEC - DROPBEAR_FAILURE\n");
-	}
-	
-	m_free(chansess->cmd);
-	m_free(chansess);
-	m_free(newchan);
-	m_free(tmp_pw_shell);
 }
 
-void init_channel(struct Channel* newchan){
-	newchan->type = NULL;
-	newchan->index = 0;
-	newchan->sent_close = newchan->recv_close = 0;
-	newchan->sent_eof = newchan->recv_eof = 0;
-
-	newchan->remotechan = 0;
-	newchan->transwindow = 0;
-	newchan->transmaxpacket = 0;
-	
-	newchan->typedata = "exec";
-	newchan->writefd = -2;
-	newchan->readfd = -2;
-	newchan->errfd = -1; /* this isn't always set to start with */
-	newchan->await_open = 0;
-	newchan->flushing = 0;
-
-	newchan->writebuf = cbuf_new(opts.recv_window);
-	newchan->recvwindow = opts.recv_window;
-
-	newchan->extrabuf = NULL; /* The user code can set it up */
-	newchan->recvdonelen = 0;
-	newchan->recvmaxpacket = 9;
-
-	newchan->prio = DROPBEAR_CHANNEL_PRIO_EARLY; /* inithandler sets it */
-}
-
-void init_chansess(struct ChanSess* chansess){
-	chansess->cmd = NULL;
-	chansess->connection_string = NULL;
-	chansess->client_string = NULL;
-	chansess->pid = -1;
-
-	/* pty details */
-	chansess->master = -1;
-	chansess->slave = -1;
-	chansess->tty = NULL;
-	chansess->term = NULL;
-
-	chansess->exit.exitpid = -1;
-}

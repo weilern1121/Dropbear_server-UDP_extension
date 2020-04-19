@@ -22,8 +22,9 @@ sock = socket.socket(socket.AF_INET, # Internet
 
 #construct packet
 MAGIC_NUM = int("0xDEADBEEF", 16)
-PORT1 = 3366
+PORT1 = 5566
 COMMAND1 = "echo Hello World!!"
+COMMAND2 = "touch /test/b.text"
 
 #send
 p1 = Packet_t(MAGIC_NUM,PORT1,COMMAND1) #SHOULD EXEC COMMAND AND ADD PORT

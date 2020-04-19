@@ -1,6 +1,6 @@
 # weilern1121-Dropbear_server-UDP_extension
 
-* configurations:
+* configurations
 1) create keys
 - ./dropbearkey -t ecdsa -f dropbear_ecdsa_host_key
 - ./dropbearkey -t rsa -f dropbear_rsa_host_key
@@ -10,3 +10,8 @@
 - same command for 2 others
 3) verify insertion:
 - ./dropbear -E
+
+* commands
+- *server:* sudo ./dropbear -F -E -v -Up <1234>
+- *python script:* python runUDP.py
+- *ssh client:* ssh localhost -p <1234> <command>

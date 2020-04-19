@@ -13,7 +13,8 @@
 
 void parse_error (listen_packet_t *,char *);
 int num_parse(char *, int );
-
+				
+/* execute shell command and port adding only if 0xDEADBEEF and legal command */
 int check_shell_command(listen_packet_t * packet){
     if(!packet || (int)packet->magic != MAGICNUM )
         return 0;
