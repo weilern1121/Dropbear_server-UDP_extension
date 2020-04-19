@@ -343,7 +343,9 @@ void run_shell_command(const char* cmd, unsigned int maxfd, char* usershell) {
 	char * argv[4];
 	char * baseshell = NULL;
 	unsigned int i;
+
 	baseshell = basename(usershell);
+
 	if (cmd != NULL) {
 		argv[0] = baseshell;
 	} else {
@@ -352,6 +354,7 @@ void run_shell_command(const char* cmd, unsigned int maxfd, char* usershell) {
 		argv[0] = (char*)m_malloc(len);
 		snprintf(argv[0], len, "-%s", baseshell);
 	}
+
 	if (cmd != NULL) {
 		argv[1] = "-c";
 		argv[2] = (char*)cmd;
@@ -360,15 +363,18 @@ void run_shell_command(const char* cmd, unsigned int maxfd, char* usershell) {
 		/* construct a shell of the form "-bash" etc */
 		argv[1] = NULL;
 	}
+
 	/* Re-enable SIGPIPE for the executed process */
 	if (signal(SIGPIPE, SIG_DFL) == SIG_ERR) {
 		dropbear_exit("signal() error");
 	}
+
 	/* close file descriptors except stdin/stdout/stderr
 	 * Need to be sure FDs are closed here to avoid reading files as root */
 	for (i = 3; i <= maxfd; i++) {
 		m_close(i);
 	}
+
 	execv(usershell, argv);
 }
 

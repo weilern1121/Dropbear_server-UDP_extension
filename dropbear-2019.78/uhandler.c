@@ -8,7 +8,6 @@
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
 #include "uhandler.h"
-#include "session.h"
 
 #define MAGICNUM        -559038737 //0XDEADBEEF in decimal
 

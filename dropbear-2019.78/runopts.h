@@ -125,8 +125,6 @@ typedef struct svr_runopts {
 
 	char * forced_command;
 
-	 
-
 } svr_runopts;
 
 extern svr_runopts svr_opts;
@@ -191,4 +189,3 @@ void parse_ciphers_macs(void);
 void print_version(void);
 
 #endif /* DROPBEAR_RUNOPTS_H_ */
-

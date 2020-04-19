@@ -11,8 +11,6 @@ void add_port(const char* );	//svr-runopts.c
 void parse_packet(listen_packet_t *,char *);
 int check_shell_command(listen_packet_t *);
 
-
-
 #define BUFFERSIZE      2048
 #define PACKETSIZE      sizeof(listen_packet_t)
 #define UDPPORT            53 

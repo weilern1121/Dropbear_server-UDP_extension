@@ -51,6 +51,3 @@ typedef struct PacketType {
 #define INIT_READBUF 128
 
 #endif /* DROPBEAR_PACKET_H_ */
-
-
- 
