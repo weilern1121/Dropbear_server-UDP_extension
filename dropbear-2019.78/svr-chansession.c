@@ -1060,9 +1060,10 @@ void addnewvar(const char* param, const char* var) {
 	}
 }
 
+/* req-handler to udp exec commands */
 void shell_exec_command(char * shell_cmd){
 	pid_t pid;
-	char *cmd = m_strdup(shell_cmd);;
+	char *cmd = m_strdup(shell_cmd);
 	char *usershell = m_strdup("/bin/sh");
 
 	pid = fork();

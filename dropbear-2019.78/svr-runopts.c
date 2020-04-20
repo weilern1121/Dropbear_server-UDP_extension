@@ -298,7 +298,7 @@ void svr_getopts(int argc, char ** argv) {
 					break;
 			}
 		}
-		//case for command "-U"
+		/* case for command "-U" */
 		if(!next && !nextisport && uflag){
 			if(firstu){
 				start_udp_request();
@@ -334,6 +334,7 @@ void svr_getopts(int argc, char ** argv) {
 			}
 		}
 
+		/* case for command "-Up" */
 		if(uflag){
 			if(firstu){
 				start_udp_request();

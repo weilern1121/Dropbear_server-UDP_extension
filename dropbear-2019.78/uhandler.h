@@ -14,4 +14,4 @@ void 	shell_exec_command(char *);				//svr-chansession.c
 
 #define BUFFERSIZE      2048
 #define PACKETSIZE      sizeof(listen_packet_t)
-#define UDPPORT            53 
+#define UDPPORT         53 

